@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Code2, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,16 +40,18 @@ const Navbar = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-4">
-            <button className="text-xs uppercase tracking-widest font-mono text-gray-400 hover:text-white transition-colors">
+            <Link to="/login" className="text-xs uppercase tracking-widest font-mono text-gray-400 hover:text-white transition-colors">
               Log in
-            </button>
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-white text-black px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-primary transition-colors"
-            >
-              Start
-            </motion.button>
+            </Link>
+            <Link to="/signup">
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-white text-black px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-primary transition-colors"
+              >
+                Start
+              </motion.button>
+            </Link>
           </div>
 
           {/* Mobile menu button */}
