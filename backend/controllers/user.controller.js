@@ -158,16 +158,136 @@ const getCurrentUser = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, req.user, "Current user fetched successfully"))
 })
 
-const getPotentialMatches = asyncHandler(async(req, res) => {
-    // Fetch all users except the current logged-in user
-    // Later this can be updated to exclude already swiped users or filter by preferences
-    const users = await User.find({ _id: { $ne: req.user._id } })
-                            .select("-password -refreshToken");
+const getPotentialMatches = asyncHandler(async (req, res) => {
 
-    return res
-    .status(200)
-    .json(new ApiResponse(200, users, "Potential matches fetched successfully"));
-})
+    const {
+        techStack,
+        location,
+        role,
+        experienceLevel,
+        availability,
+        sortBy,
+        page = 1,
+        limit = 10
+    } = req.query;
+
+    const filter = {};
+
+    // Exclude current user
+    filter._id = {
+        $ne: req.user?._id
+    };
+
+    // Tech stack filter
+    if (techStack) {
+
+        const skillsArray =
+            techStack.split(",");
+
+        filter.techStack = {
+            $in: skillsArray.map(
+                skill =>
+                    skill.toLowerCase().trim()
+            )
+        };
+    }
+
+    // Location filter
+    if (location) {
+
+        filter.location = {
+            $regex: location,
+            $options: "i"
+        };
+    }
+
+    // Role filter
+    if (role) {
+
+        filter.teamRole = {
+            $regex: role,
+            $options: "i"
+        };
+    }
+
+    // Experience filter
+    if (experienceLevel) {
+
+        filter.experienceLevel =
+            experienceLevel;
+    }
+
+    // Availability filter
+    if (availability !== undefined) {
+
+        filter.availability =
+            availability === "true";
+    }
+
+    // Sorting
+    let sortOption = {
+        createdAt: -1
+    };
+
+    if (sortBy === "oldest") {
+
+        sortOption = {
+            createdAt: 1
+        };
+    }
+
+    // Pagination
+    const skip =
+        (Number(page) - 1) *
+        Number(limit);
+
+    const users = await User.find(filter)
+
+        .select(
+            "-password -refreshToken"
+        )
+
+        .sort(sortOption)
+
+        .skip(skip)
+
+        .limit(Number(limit));
+
+    // Total count
+    const totalUsers =
+        await User.countDocuments(filter);
+
+    return res.status(200).json(
+
+        new ApiResponse(
+
+            200,
+
+            {
+                users,
+
+                pagination: {
+
+                    totalUsers,
+
+                    currentPage:
+                        Number(page),
+
+                    totalPages:
+                        Math.ceil(
+                            totalUsers /
+                            Number(limit)
+                        ),
+
+                    limit:
+                        Number(limit)
+                }
+            },
+
+            "Users fetched successfully"
+        )
+    );
+});
 
 export {
     registerUser,
