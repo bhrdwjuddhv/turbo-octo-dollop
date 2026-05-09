@@ -1,94 +1,102 @@
-import mongoose from "mongoose";
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import mongoose, {Schema} from "mongoose";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
-const UserSchema = new mongoose.Schema({
-
-    username:{
+const userSchema = new Schema({
+    username: {
         type: String,
         required: true,
-        lowercase: true,
         unique: true,
-        trim: true
+        lowercase: true,
+        trim: true,
+        index: true
     },
-
-    password: {
-        type: String,
-        required: true,
-        select: false
-    },
-
-    avatar: {
-        type: String,
-        default: ""
-    },
-
     email: {
         type: String,
         required: true,
         unique: true,
         lowercase: true,
-        trim: true
+        trim: true,
     },
-
-    coverImage: {
+    password: {
         type: String,
-        default: "https://upload.wikimedia.org/wikipedia/commons/2/2c/Default_pfp.svg"
+        required: [true, 'Password is required']
     },
-
-    hackathonExperience: {
-        type: Number,
-        default: 0
+    avatar: {
+        type: String, // cloudinary url
+        required: false
     },
-
+    coverImage: {
+        type: String, // cloudinary url
+        required: false
+    },
+    team_role: {
+        type: String,
+        required: false
+    },
     location: {
-        type: String
+        type: String,
+        required: false
     },
-
-    preferences: [{
+    techStack: [
+        {
+            type: String
+        }
+    ],
+    experience: [
+        {
+            type: String
+        }
+    ],
+    preferences: [
+        {
+            type: String
+        }
+    ],
+    projects: [
+        {
+            type: String
+        }
+    ],
+    refreshToken: {
         type: String
-    }],
+    }
+}, {timestamps: true})
 
-    techStack: [{
-        type: String
-    }],
-
-    teamRole: [{
-        type: String
-    }],
-
-    team: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Team"
-    },
-
-    projects:[{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Project"
-    }]
-
-},{timestamps: true});
-
-UserSchema.pre("save", async function (next) {
-if (!this.isModified('password')) return next();
-this.password = await bcrypt.hash(this.password, 12);
+userSchema.pre("save", async function (next) {
+    if(!this.isModified("password")) return next();
+    this.password = await bcrypt.hash(this.password, 10)
+    next()
 })
 
-UserSchema.methods.comparePassword = function (password) {
-    return bcrypt.compare(password, this.password);
+userSchema.methods.isPasswordCorrect = async function(password){
+    return await bcrypt.compare(password, this.password)
 }
 
-UserSchema.methods.generateAccessToken = function () {
+userSchema.methods.generateAccessToken = function(){
     return jwt.sign(
         {
             _id: this._id,
             email: this.email,
-            username: this.username,
+            username: this.username
         },
         process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
+        {
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "1d"
+        }
     )
 }
 
-const User = mongoose.model("User", UserSchema);
-export { User };
+userSchema.methods.generateRefreshToken = function(){
+    return jwt.sign(
+        {
+            _id: this._id,
+        },
+        process.env.REFRESH_TOKEN_SECRET,
+        {
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "10d"
+        }
+    )
+}
+
+export const User = mongoose.model("User", userSchema)
