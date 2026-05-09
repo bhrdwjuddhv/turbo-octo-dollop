@@ -1,9 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Code2, ArrowRight } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/api/v1/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        login(data.data.user);
+        alert('Login successful!');
+        navigate('/dashboard');
+      } else {
+        alert(`Error: ${data.message || 'Login failed'}`);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('An error occurred during login.');
+    }
+  };
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4">
       
@@ -33,11 +60,13 @@ const Login = () => {
           <p className="text-gray-400 font-mono text-xs">Access your terminal to find your next team.</p>
         </div>
 
-        <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+        <form className="space-y-5" onSubmit={handleLogin}>
           <div className="space-y-1">
             <label className="text-xs font-mono text-gray-500 uppercase tracking-widest block">Developer Email</label>
             <input 
               type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="user@network.com"
               className="w-full bg-black border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors brutal-border placeholder:text-white/20"
             />
@@ -50,12 +79,15 @@ const Login = () => {
             </div>
             <input 
               type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••••••"
               className="w-full bg-black border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors brutal-border placeholder:text-white/20"
             />
           </div>
 
           <motion.button 
+            type="submit"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="w-full bg-primary text-black py-4 font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-3 border border-primary shadow-[4px_4px_0_#FF00E5] hover:shadow-[6px_6px_0_#FF00E5] transition-all mt-6"

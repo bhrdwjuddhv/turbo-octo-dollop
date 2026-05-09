@@ -74,6 +74,41 @@ const Signup = () => {
   const nextStep = () => setStep(prev => Math.min(prev + 1, 4));
   const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
 
+  const handleSubmit = async () => {
+    try {
+      const data = new FormData();
+      data.append('username', formData.username);
+      data.append('email', formData.email);
+      data.append('password', formData.password);
+      data.append('team_role', formData.team_role);
+      data.append('location', formData.location);
+      
+      data.append('techStack', JSON.stringify(formData.techStack));
+      data.append('experience', JSON.stringify(formData.experience.filter(e => e.trim() !== '')));
+      data.append('preferences', JSON.stringify(formData.preferences));
+      data.append('projects', JSON.stringify(formData.projects.filter(p => p.trim() !== '')));
+
+      // In a real scenario we'd append actual file objects here if they were selected in the UI.
+      // Currently the UI doesn't have an input type="file", so we'll pass.
+
+      const response = await fetch('/api/v1/users/register', {
+        method: 'POST',
+        body: data
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        alert('Registration successful!');
+        window.location.href = '/login';
+      } else {
+        alert(`Error: ${result.message || 'Something went wrong'}`);
+      }
+    } catch (error) {
+      console.error('Registration failed:', error);
+      alert('An error occurred during registration.');
+    }
+  };
+
   const slideVariants = {
     hidden: { x: 50, opacity: 0 },
     visible: { x: 0, opacity: 1, transition: { duration: 0.4 } },
@@ -288,7 +323,7 @@ const Signup = () => {
                 Next <ArrowRight className="w-4 h-4" />
               </button>
             ) : (
-              <button className="bg-accent text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:shadow-[4px_4px_0_#CCFF00] transition-all brutal-border border-accent flex items-center gap-2">
+              <button onClick={handleSubmit} className="bg-accent text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:shadow-[4px_4px_0_#CCFF00] transition-all brutal-border border-accent flex items-center gap-2">
                 Submit Data <Code2 className="w-4 h-4" />
               </button>
             )}
