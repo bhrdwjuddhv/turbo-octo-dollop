@@ -27,7 +27,8 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
-        lowercase: true
+        lowercase: true,
+        trim: true
     },
 
     coverImage: {
@@ -88,3 +89,6 @@ UserSchema.methods.generateAccessToken = function () {
         { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
     )
 }
+
+const User = mongoose.model("User", UserSchema);
+export { User };
