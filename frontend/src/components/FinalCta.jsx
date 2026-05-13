@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const FinalCta = () => {
   return (
@@ -26,13 +27,15 @@ const FinalCta = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-primary text-background px-8 py-4 rounded-lg font-bold glow-blue-hover transition-all text-lg"
-            >
-              Start Matching
-            </motion.button>
+            <Link to="/signup">
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-primary text-background px-8 py-4 rounded-lg font-bold glow-blue-hover transition-all text-lg"
+              >
+                Start Matching
+              </motion.button>
+            </Link>
             <motion.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}

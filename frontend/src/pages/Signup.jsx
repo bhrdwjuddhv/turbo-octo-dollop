@@ -25,17 +25,31 @@ const PREF_OPTIONS = [
 
 const Signup = () => {
   const [step, setStep] = useState(1);
+  const [previews, setPreviews] = useState({ avatar: null, coverImage: null });
   const [formData, setFormData] = useState({
     username: '', email: '', password: '',
-    avatar: null, coverPage: null, team_role: '', location: '',
+    avatar: null, coverImage: null, team_role: '', location: '',
     techStack: [],
     experience: [''],
     preferences: [],
-    projects: ['']
+    projects: [''],
+    socialLinks: { github: '', linkedin: '' }
   });
 
   const updateForm = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleFileChange = (e, field) => {
+    const file = e.target.files[0];
+    if (file) {
+      updateForm(field, file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviews(prev => ({ ...prev, [field]: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleArrayInput = (field, index, value) => {
@@ -71,7 +85,18 @@ const Signup = () => {
     }
   };
 
-  const nextStep = () => setStep(prev => Math.min(prev + 1, 4));
+  const nextStep = () => {
+    if (step === 1 && (!formData.username || !formData.email || !formData.password)) {
+      alert("System access requires all credentials.");
+      return;
+    }
+    if (step === 2 && (!formData.socialLinks.github || !formData.socialLinks.linkedin)) {
+      alert("GitHub and LinkedIn are mandatory protocols for Hacker Identity.");
+      return;
+    }
+    setStep(prev => Math.min(prev + 1, 4));
+  };
+
   const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
 
   const handleSubmit = async () => {
@@ -82,14 +107,15 @@ const Signup = () => {
       data.append('password', formData.password);
       data.append('team_role', formData.team_role);
       data.append('location', formData.location);
+      data.append('socialLinks', JSON.stringify(formData.socialLinks));
+      
+      if (formData.avatar) data.append('avatar', formData.avatar);
+      if (formData.coverImage) data.append('coverImage', formData.coverImage);
       
       data.append('techStack', JSON.stringify(formData.techStack));
       data.append('experience', JSON.stringify(formData.experience.filter(e => e.trim() !== '')));
       data.append('preferences', JSON.stringify(formData.preferences));
       data.append('projects', JSON.stringify(formData.projects.filter(p => p.trim() !== '')));
-
-      // In a real scenario we'd append actual file objects here if they were selected in the UI.
-      // Currently the UI doesn't have an input type="file", so we'll pass.
 
       const response = await fetch('/api/v1/users/register', {
         method: 'POST',
@@ -179,14 +205,29 @@ const Signup = () => {
                 <div className="grid grid-cols-2 gap-6">
                   {/* Image Uploads */}
                   <div className="space-y-4">
-                    <div className="border border-dashed border-white/20 hover:border-primary transition-colors h-32 flex flex-col items-center justify-center cursor-pointer bg-white/5">
-                      <Upload className="w-6 h-6 text-gray-500 mb-2" />
-                      <span className="text-xs font-mono text-gray-500">Upload Avatar</span>
-                    </div>
-                    <div className="border border-dashed border-white/20 hover:border-primary transition-colors h-20 flex flex-col items-center justify-center cursor-pointer bg-white/5">
-                      <Upload className="w-5 h-5 text-gray-500 mb-1" />
-                      <span className="text-[10px] font-mono text-gray-500">Upload Cover</span>
-                    </div>
+                    <label className="relative border border-dashed border-white/20 hover:border-primary transition-colors h-32 flex flex-col items-center justify-center cursor-pointer bg-white/5 overflow-hidden group">
+                      {previews.avatar ? (
+                        <img src={previews.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-gray-500 mb-2 group-hover:text-primary transition-colors" />
+                          <span className="text-xs font-mono text-gray-500 group-hover:text-primary transition-colors">Upload Avatar</span>
+                        </>
+                      )}
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'avatar')} />
+                    </label>
+
+                    <label className="relative border border-dashed border-white/20 hover:border-primary transition-colors h-20 flex flex-col items-center justify-center cursor-pointer bg-white/5 overflow-hidden group">
+                      {previews.coverImage ? (
+                        <img src={previews.coverImage} alt="Cover" className="w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          <Upload className="w-5 h-5 text-gray-500 mb-1 group-hover:text-primary transition-colors" />
+                          <span className="text-[10px] font-mono text-gray-500 group-hover:text-primary transition-colors">Upload Cover</span>
+                        </>
+                      )}
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'coverImage')} />
+                    </label>
                   </div>
                   <div className="space-y-4">
                     <div className="space-y-1">
@@ -203,6 +244,56 @@ const Signup = () => {
                     <div className="space-y-1">
                       <label className="text-xs font-mono text-gray-500 uppercase tracking-widest">Location / Timezone</label>
                       <input type="text" value={formData.location} onChange={e => updateForm('location', e.target.value)} placeholder="e.g. UTC-8 or SF, CA" className="w-full bg-black border border-white/10 px-4 py-3 text-white focus:border-primary outline-none transition-colors brutal-border" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-mono text-gray-500 uppercase tracking-widest">GitHub URL*</label>
+                      <input type="text" value={formData.socialLinks.github} onChange={e => updateForm('socialLinks', {...formData.socialLinks, github: e.target.value})} placeholder="https://github.com/..." className="w-full bg-black border border-white/10 px-4 py-3 text-white focus:border-primary outline-none transition-colors brutal-border" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-mono text-gray-500 uppercase tracking-widest">LinkedIn URL*</label>
+                      <input type="text" value={formData.socialLinks.linkedin} onChange={e => updateForm('socialLinks', {...formData.socialLinks, linkedin: e.target.value})} placeholder="https://linkedin.com/in/..." className="w-full bg-black border border-white/10 px-4 py-3 text-white focus:border-primary outline-none transition-colors brutal-border" />
+                    </div>
+
+                    <div className="pt-4 border-t border-white/5 space-y-4">
+                      <label className="text-[10px] font-mono text-gray-500 uppercase">Additional_Nodes_</label>
+                      {(formData.socialLinks.others || []).map((link, idx) => (
+                        <div key={idx} className="flex gap-2">
+                          <input 
+                            type="text" 
+                            placeholder="Platform URL (e.g. Portfolio, Twitter)"
+                            value={link.url}
+                            onChange={(e) => {
+                              const newOthers = [...formData.socialLinks.others];
+                              newOthers[idx].url = e.target.value;
+                              newOthers[idx].platform = e.target.value.includes('twitter') ? 'Twitter' : 
+                                                     e.target.value.includes('leetcode') ? 'LeetCode' : 'Portal';
+                              updateForm('socialLinks', {...formData.socialLinks, others: newOthers});
+                            }}
+                            className="flex-1 bg-black border border-white/10 px-4 py-3 text-white focus:border-primary outline-none brutal-border"
+                          />
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              const newOthers = formData.socialLinks.others.filter((_, i) => i !== idx);
+                              updateForm('socialLinks', {...formData.socialLinks, others: newOthers});
+                            }}
+                            className="p-3 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const currentOthers = formData.socialLinks.others || [];
+                          const newOthers = [...currentOthers, { platform: 'Portal', url: '' }];
+                          updateForm('socialLinks', {...formData.socialLinks, others: newOthers});
+                        }}
+                        className="w-full py-2 border border-dashed border-white/10 text-[10px] font-mono text-gray-500 hover:text-primary transition-all flex items-center justify-center gap-2"
+                      >
+                        <Plus size={12} /> Add_Another_Platform_
+                      </button>
                     </div>
                   </div>
                 </div>

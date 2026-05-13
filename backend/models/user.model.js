@@ -30,6 +30,14 @@ const userSchema = new Schema({
         type: String, // cloudinary url
         required: false
     },
+    fullName: {
+        type: String,
+        required: false
+    },
+    bio: {
+        type: String,
+        required: false
+    },
     team_role: {
         type: String,
         required: false
@@ -58,15 +66,24 @@ const userSchema = new Schema({
             type: String
         }
     ],
+    socialLinks: {
+        github: { type: String },
+        linkedin: { type: String },
+        others: [
+            {
+                platform: { type: String },
+                url: { type: String }
+            }
+        ]
+    },
     refreshToken: {
         type: String
     }
 }, {timestamps: true})
 
-userSchema.pre("save", async function (next) {
-    if(!this.isModified("password")) return next();
+userSchema.pre("save", async function () {
+    if(!this.isModified("password")) return;
     this.password = await bcrypt.hash(this.password, 10)
-    next()
 })
 
 userSchema.methods.isPasswordCorrect = async function(password){

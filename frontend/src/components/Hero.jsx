@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 
 const Hero = () => {
@@ -31,13 +32,15 @@ const Hero = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-primary text-black px-10 py-5 font-bold uppercase tracking-wider text-sm flex items-center gap-3 border border-primary shadow-[6px_6px_0_#FF00E5] hover:shadow-[8px_8px_0_#FF00E5] hover:-translate-y-1 transition-all"
-            >
-              Initialize Match <ArrowRight className="w-4 h-4" />
-            </motion.button>
+            <Link to="/signup">
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-primary text-black px-10 py-5 font-bold uppercase tracking-wider text-sm flex items-center gap-3 border border-primary shadow-[6px_6px_0_#FF00E5] hover:shadow-[8px_8px_0_#FF00E5] hover:-translate-y-1 transition-all"
+              >
+                Initialize Match <ArrowRight className="w-4 h-4" />
+              </motion.button>
+            </Link>
             <motion.a 
               href="#"
               whileHover={{ x: 5 }}
