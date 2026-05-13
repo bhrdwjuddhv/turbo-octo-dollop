@@ -20,112 +20,139 @@ const generateAccessAndRefreshTokens = async(userId) =>{
     }
 }
 
-const registerUser = asyncHandler(async (req, res) => {
-    const { username, email, password, team_role, location, techStack, experience, preferences, projects } = req.body;
+const registerUser = async (req, res, next) => {
+    try {
+        console.log("Registration process started...");
+        const { username, email, password, team_role, location, techStack, experience, preferences, projects, socialLinks } = req.body;
+        console.log("Request Body received:", { username, email, hasPassword: !!password });
 
-    if ([username, email, password].some((field) => field?.trim() === "")) {
-        throw new ApiError(400, "Username, email and password are required");
-    }
-
-    const existedUser = await User.findOne({
-        $or: [{ username }, { email }]
-    });
-
-    if (existedUser) {
-        throw new ApiError(409, "User with email or username already exists");
-    }
-
-    const avatarLocalPath = req.files?.avatar?.[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
-
-    let avatar;
-    if (avatarLocalPath) {
-        avatar = await uploadOnCloudinary(avatarLocalPath);
-    }
-
-    let coverImage;
-    if (coverImageLocalPath) {
-        coverImage = await uploadOnCloudinary(coverImageLocalPath);
-    }
-
-    // parsing arrays if they were sent as stringified JSON or comma-separated
-    const parseArray = (data) => {
-        if (!data) return [];
-        if (Array.isArray(data)) return data;
-        try {
-            return JSON.parse(data);
-        } catch {
-            return data.split(',').map(s => s.trim());
+        if ([username, email, password].some((field) => !field || field.trim() === "")) {
+            return res.status(400).json(new ApiResponse(400, null, "Username, email and password are required"));
         }
-    };
 
-    const user = await User.create({
-        username: username.toLowerCase(),
-        email,
-        password,
-        avatar: avatar?.url || "",
-        coverImage: coverImage?.url || "",
-        team_role,
-        location,
-        techStack: parseArray(techStack),
-        experience: parseArray(experience),
-        preferences: parseArray(preferences),
-        projects: parseArray(projects)
-    });
+        const existedUser = await User.findOne({
+            $or: [{ username }, { email }]
+        });
 
-    const createdUser = await User.findById(user._id).select("-password -refreshToken");
+        if (existedUser) {
+            return res.status(409).json(new ApiResponse(409, null, "User with email or username already exists"));
+        }
 
-    if (!createdUser) {
-        throw new ApiError(500, "Something went wrong while registering the user");
-    }
+        console.log("Checking for files...");
+        const avatarLocalPath = req.files?.avatar?.[0]?.path;
+        const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
+        console.log("Local paths:", { avatarLocalPath, coverImageLocalPath });
 
-    return res.status(201).json(
-        new ApiResponse(200, createdUser, "User registered successfully")
-    );
-});
+        let avatar;
+        if (avatarLocalPath) {
+            avatar = await uploadOnCloudinary(avatarLocalPath);
+            console.log("Avatar uploaded:", !!avatar);
+        }
 
-const loginUser = asyncHandler(async (req, res) => {
-    const { email, username, password } = req.body;
+        let coverImage;
+        if (coverImageLocalPath) {
+            coverImage = await uploadOnCloudinary(coverImageLocalPath);
+            console.log("Cover image uploaded:", !!coverImage);
+        }
 
-    if (!username && !email) {
-        throw new ApiError(400, "Username or email is required");
-    }
+        const parseArray = (data) => {
+            if (!data) return [];
+            if (Array.isArray(data)) return data;
+            try {
+                return JSON.parse(data);
+            } catch {
+                return typeof data === 'string' ? data.split(',').map(s => s.trim()) : [];
+            }
+        };
 
-    const user = await User.findOne({
-        $or: [{ username }, { email }]
-    });
+        console.log("Creating user in DB...");
+        const user = await User.create({
+            username: username.toLowerCase(),
+            email,
+            password,
+            avatar: avatar?.url || "",
+            coverImage: coverImage?.url || "",
+            team_role,
+            location,
+            techStack: parseArray(techStack),
+            experience: parseArray(experience),
+            preferences: parseArray(preferences),
+            projects: parseArray(projects),
+            socialLinks: typeof socialLinks === 'string' ? JSON.parse(socialLinks) : socialLinks
+        });
 
-    if (!user) {
-        throw new ApiError(404, "User does not exist");
-    }
+        const createdUser = await User.findById(user._id).select("-password -refreshToken");
 
-    const isPasswordValid = await user.isPasswordCorrect(password);
+        if (!createdUser) {
+            return res.status(500).json(new ApiResponse(500, null, "Something went wrong while registering the user"));
+        }
 
-    if (!isPasswordValid) {
-        throw new ApiError(401, "Invalid user credentials");
-    }
-
-    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
-
-    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
-
-    const options = {
-        httpOnly: true,
-        secure: true
-    };
-
-    return res
-        .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
-        .json(
-            new ApiResponse(
-                200, 
-                { user: loggedInUser, accessToken, refreshToken },
-                "User logged In Successfully"
-            )
+        console.log("Registration successful for:", createdUser.username);
+        return res.status(201).json(
+            new ApiResponse(201, createdUser, "User registered successfully")
         );
-});
+
+    } catch (error) {
+        console.error("CRITICAL REGISTRATION ERROR:", error);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || "Internal Server Error during registration"
+        });
+    }
+};
+
+const loginUser = async (req, res, next) => {
+    try {
+        const { email, username, password } = req.body;
+        console.log("Login attempt:", { identifier: email || username });
+
+        if (!username && !email) {
+            return res.status(400).json(new ApiResponse(400, null, "Username or email is required"));
+        }
+
+        const user = await User.findOne({
+            $or: [{ username }, { email }]
+        });
+
+        if (!user) {
+            return res.status(404).json(new ApiResponse(404, null, "User does not exist"));
+        }
+
+        const isPasswordValid = await user.isPasswordCorrect(password);
+
+        if (!isPasswordValid) {
+            return res.status(401).json(new ApiResponse(401, null, "Invalid user credentials"));
+        }
+
+        const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
+
+        const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+
+        const options = {
+            httpOnly: true,
+            secure: true
+        };
+
+        console.log("Login successful for:", loggedInUser.username);
+        return res
+            .status(200)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", refreshToken, options)
+            .json(
+                new ApiResponse(
+                    200, 
+                    { user: loggedInUser, accessToken, refreshToken },
+                    "User logged In Successfully"
+                )
+            );
+    } catch (error) {
+        console.error("LOGIN ERROR:", error);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || "Internal Server Error during login"
+        });
+    }
+};
 
 const logoutUser = asyncHandler(async(req, res) => {
     await User.findByIdAndUpdate(
@@ -289,10 +316,55 @@ const getPotentialMatches = asyncHandler(async (req, res) => {
     );
 });
 
+const updateAccountDetails = asyncHandler(async(req, res) => {
+    const { 
+        fullName, 
+        bio, 
+        location, 
+        team_role, 
+        techStack, 
+        experience, 
+        projects, 
+        socialLinks 
+    } = req.body;
+
+    const parseArray = (data) => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        try {
+            return JSON.parse(data);
+        } catch {
+            return data.split(',').map(s => s.trim());
+        }
+    };
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                fullName,
+                bio,
+                location,
+                team_role,
+                techStack: parseArray(techStack),
+                experience: parseArray(experience),
+                projects: parseArray(projects),
+                socialLinks: typeof socialLinks === 'string' ? JSON.parse(socialLinks) : socialLinks
+            }
+        },
+        { new: true }
+    ).select("-password -refreshToken");
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Account details updated successfully"));
+})
+
 export {
     registerUser,
     loginUser,
     logoutUser,
     getCurrentUser,
-    getPotentialMatches
+    getPotentialMatches,
+    updateAccountDetails
 }

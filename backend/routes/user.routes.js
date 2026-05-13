@@ -1,5 +1,12 @@
 import { Router } from "express";
-import { loginUser, logoutUser, registerUser, getCurrentUser, getPotentialMatches } from "../controllers/user.controller.js";
+import { 
+    loginUser, 
+    logoutUser, 
+    registerUser, 
+    getCurrentUser, 
+    getPotentialMatches,
+    updateAccountDetails 
+} from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -24,6 +31,7 @@ router.route("/login").post(loginUser)
 //secured routes
 router.route("/logout").post(verifyJWT,  logoutUser)
 router.route("/me").get(verifyJWT, getCurrentUser)
-router.route("/discover-users").get(verifyJWT, getPotentialMatches)
+router.route("/discover").get(verifyJWT, getPotentialMatches)
+router.route("/update-account").patch(verifyJWT, updateAccountDetails)
 
 export default router
