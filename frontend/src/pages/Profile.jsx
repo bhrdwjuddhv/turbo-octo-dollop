@@ -69,11 +69,11 @@ const Profile = () => {
   const handleUpdate = async () => {
     try {
       setIsSaving(true);
-      const res = await axios.put('http://localhost:5000/api/users/update-account', formData, {
+      const res = await axios.patch('/api/v1/users/update-account', formData, {
         withCredentials: true
       });
-      if (res.data.user) {
-        login(res.data.user);
+      if (res.data.data) {
+        login(res.data.data);
         setIsEditModalOpen(false);
         setEditStep(1);
       }
@@ -106,21 +106,21 @@ const Profile = () => {
   };
 
   const profileData = {
-    fullName: user?.fullName || "Aria Nightshade",
-    username: user?.username || "aria_shades",
-    role: user?.team_role || "Senior Cloud Architect",
-    location: user?.location || "Berlin, DE",
-    tagline: user?.bio || "Architecting high-availability neural networks and distributed systems for the next frontier.",
+    fullName: user?.fullName || "",
+    username: user?.username || "",
+    role: user?.team_role || "",
+    location: user?.location || "",
+    tagline: user?.bio || "",
     avatar: user?.avatar || null,
     stats: {
-      hackathons: "12",
-      wins: "04",
-      rating: "98%",
-      matchRate: "92%"
+      hackathons: "",
+      wins: "",
+      rating: "",
+      matchRate: ""
     },
     socials: [
-      { name: 'GitHub', icon: <Code2 size={16} />, url: user?.socialLinks?.github || '#' },
-      { name: 'LinkedIn', icon: <Briefcase size={16} />, url: user?.socialLinks?.linkedin || '#' },
+      ...(user?.socialLinks?.github ? [{ name: 'GitHub', icon: <Code2 size={16} />, url: user.socialLinks.github }] : []),
+      ...(user?.socialLinks?.linkedin ? [{ name: 'LinkedIn', icon: <Briefcase size={16} />, url: user.socialLinks.linkedin }] : []),
       ...(user?.socialLinks?.others || []).map(link => ({
         name: link.platform || 'Platform',
         icon: link.platform?.toLowerCase() === 'leetcode' ? <LeetCodeIcon /> : <Globe size={16} />,
@@ -129,14 +129,10 @@ const Profile = () => {
     ],
     skills: (user?.techStack && user.techStack.length > 0) 
       ? {
-          core: user.techStack.slice(0, 4),
-          extended: user.techStack.slice(4, 8),
-          tools: user.techStack.slice(8, 12)
+          core: user.techStack
         }
       : {
-          frontend: ['React', 'Next.js', 'Tailwind', 'Framer'],
-          backend: ['Node.js', 'Go', 'PostgreSQL', 'Redis'],
-          devops: ['Docker', 'AWS', 'Kubernetes', 'CI/CD']
+          core: []
         }
     };
 
@@ -176,10 +172,10 @@ const Profile = () => {
               </div>
               <div>
                 <h2 className="text-2xl font-black text-white flex items-center gap-3">
-                  {user?.username || "Aria_Shades"}
+                  {user?.username || ""}
                   <span className="text-[10px] bg-[#4F46E5]/10 text-indigo-400 px-3 py-1 rounded-full border border-indigo-500/20 font-bold tracking-widest uppercase">Verified Protocol</span>
                 </h2>
-                <p className="text-xs text-slate-500 font-mono mt-1 uppercase tracking-widest">{user?.team_role || "Full_Stack_Architect"}</p>
+                <p className="text-xs text-slate-500 font-mono mt-1 uppercase tracking-widest">{user?.team_role || ""}</p>
               </div>
             </div>
           </div>
@@ -200,7 +196,7 @@ const Profile = () => {
             ))}
           </div>
         </motion.div>
-
+ 
         {/* 12-COLUMN MAIN GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
           
@@ -218,11 +214,11 @@ const Profile = () => {
                 <div className="space-y-4">
                   <div className="flex items-center gap-4 text-sm text-slate-400 hover:text-white transition-colors cursor-default">
                     <div className="p-2 bg-slate-800 rounded-lg"><MapPin size={14} className="text-[#97ce23]" /></div>
-                    <span>{user?.location || "SF_Sector_01"}</span>
+                    <span>{user?.location || ""}</span>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-slate-400 hover:text-white transition-colors cursor-default">
                     <div className="p-2 bg-slate-800 rounded-lg"><Globe size={14} className="text-[#4F46E5]" /></div>
-                    <span>{user?.username}.dev</span>
+                    <span>{user?.username ? `${user.username}.dev` : ""}</span>
                   </div>
                 </div>
               </div>
@@ -316,39 +312,44 @@ const Profile = () => {
                 <button className="text-[10px] font-black text-[#4F46E5] hover:text-white transition-colors uppercase tracking-widest border-b border-[#4F46E5]/30">Archive_View_</button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {[1, 2].map(i => (
-                  <div key={i} className="group bg-slate-900/40 border border-slate-800 rounded-[3rem] overflow-hidden hover:border-[#4F46E5]/30 transition-all shadow-xl">
-                    <div className="h-52 bg-slate-800/20 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
-                      <div className="absolute bottom-8 left-8 flex gap-3">
-                        <span className="px-4 py-1.5 bg-[#97ce23]/10 border border-[#97ce23]/20 rounded-xl text-[10px] font-black text-[#97ce23] uppercase tracking-widest backdrop-blur-md">AI_ML</span>
-                        <span className="px-4 py-1.5 bg-[#4F46E5]/10 border border-[#4F46E5]/20 rounded-xl text-[10px] font-black text-[#4F46E5] uppercase tracking-widest backdrop-blur-md">Node_JS</span>
-                      </div>
-                    </div>
-                    <div className="p-10 space-y-6">
-                      <div className="space-y-2">
-                        <h4 className="text-2xl font-black text-white group-hover:text-[#4F46E5] transition-colors uppercase tracking-tighter">Project_Aether_{i}</h4>
-                        <p className="text-sm text-slate-500 font-medium leading-relaxed">Distributive neural computing interface for high-performance squad synchronization and matching.</p>
-                      </div>
-                      <div className="flex items-center justify-between pt-6 border-t border-slate-800/50">
-                        <div className="flex items-center gap-2">
-                          <div className="flex -space-x-3">
-                            {[1, 2, 3].map(u => (
-                              <div key={u} className="w-8 h-8 rounded-full bg-slate-800 border-2 border-[#0B0F1A] flex items-center justify-center text-[10px] font-black text-slate-500">U</div>
-                            ))}
-                          </div>
-                          <span className="text-[10px] font-bold text-slate-600 uppercase ml-2">+4 Members</span>
+                {user?.projects && user.projects.map((projectUrl, idx) => {
+                  let projectName = "Project";
+                  try {
+                    const url = new URL(projectUrl);
+                    const pathParts = url.pathname.split('/').filter(p => p);
+                    if (pathParts.length > 0) {
+                      projectName = pathParts[pathParts.length - 1];
+                    }
+                  } catch {
+                    projectName = projectUrl || "Unnamed Project";
+                  }
+                  
+                  return (
+                    <div key={idx} className="group bg-slate-900/40 border border-slate-800 rounded-[3rem] overflow-hidden hover:border-[#4F46E5]/30 transition-all shadow-xl">
+                      <div className="h-52 bg-slate-800/20 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
+                        <div className="absolute bottom-8 left-8 flex gap-3">
+                          <span className="px-4 py-1.5 bg-[#4F46E5]/10 border border-[#4F46E5]/20 rounded-xl text-[10px] font-black text-[#4F46E5] uppercase tracking-widest backdrop-blur-md">Repository</span>
                         </div>
-                        <button className="w-12 h-12 bg-slate-800/50 rounded-2xl flex items-center justify-center text-slate-500 hover:text-white hover:bg-[#4F46E5] transition-all">
-                          <ExternalLink size={18} />
-                        </button>
+                      </div>
+                      <div className="p-10 space-y-6">
+                        <div className="space-y-2">
+                          <h4 className="text-2xl font-black text-white group-hover:text-[#4F46E5] transition-colors uppercase tracking-tighter truncate">{projectName}</h4>
+                          <p className="text-sm text-slate-500 font-mono break-all">{projectUrl}</p>
+                        </div>
+                        <div className="flex items-center justify-between pt-6 border-t border-slate-800/50">
+                          <div></div>
+                          <a href={projectUrl} target="_blank" rel="noreferrer" className="w-12 h-12 bg-slate-800/50 rounded-2xl flex items-center justify-center text-slate-500 hover:text-white hover:bg-[#4F46E5] transition-all">
+                            <ExternalLink size={18} />
+                          </a>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 
                 {/* EMPTY STATE */}
-                <button className="border-2 border-dashed border-slate-800/50 rounded-[3rem] p-16 flex flex-col items-center justify-center gap-6 hover:border-[#97ce23]/30 group transition-all bg-slate-900/20">
+                <button onClick={() => setIsEditModalOpen(true)} className="border-2 border-dashed border-slate-800/50 rounded-[3rem] p-16 flex flex-col items-center justify-center gap-6 hover:border-[#97ce23]/30 group transition-all bg-slate-900/20">
                   <div className="w-20 h-20 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-700 group-hover:text-[#97ce23] group-hover:scale-110 group-hover:rotate-12 transition-all">
                     <Plus size={32} />
                   </div>
