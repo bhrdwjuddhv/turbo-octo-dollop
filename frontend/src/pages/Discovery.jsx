@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { Code2, X, Heart, MapPin, Terminal, LogOut } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Code2, X, Heart, MapPin, Terminal, LogOut, User } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 
 const TECH_COLORS = {
   'JS': '#F7DF1E', 'TS': '#3178C6', 'PY': '#3776AB', 'RS': '#FFFFFF',
@@ -67,9 +67,15 @@ const Discovery = () => {
           <Code2 className="w-6 h-6 text-primary" />
           <span className="font-black text-xl uppercase tracking-tighter">HackMatch</span>
         </div>
-        <button onClick={handleLogout} className="text-gray-500 hover:text-white transition-colors">
-          <LogOut className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-4">
+          <Link to="/profile" className="text-gray-500 hover:text-white transition-colors flex items-center gap-2">
+            <User className="w-5 h-5" />
+            <span className="text-xs font-mono uppercase">{user?.username}</span>
+          </Link>
+          <button onClick={handleLogout} className="text-gray-500 hover:text-white transition-colors">
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
       </header>
 
       {/* Main Content */}
