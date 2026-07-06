@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Code2, ArrowRight, Upload, Plus, X, ArrowLeft, Check } from 'lucide-react';
+import { Code2, ArrowRight, Upload, Plus, X, ArrowLeft, Check, Eye, EyeOff } from 'lucide-react';
 
 // NOTE: `id` here is what actually gets submitted to the backend and must
 // match the canonical skill strings in backend/constants/techStack.constants.js
@@ -31,8 +31,10 @@ const PREF_OPTIONS = [
 const Signup = () => {
   const [step, setStep] = useState(1);
   const [previews, setPreviews] = useState({ avatar: null, coverImage: null });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
-    username: '', email: '', password: '',
+    username: '', email: '', password: '', confirmPassword: '',
     avatar: null, coverImage: null, team_role: '', location: '',
     techStack: [],
     experience: [''],
@@ -91,9 +93,15 @@ const Signup = () => {
   };
 
   const nextStep = () => {
-    if (step === 1 && (!formData.username || !formData.email || !formData.password)) {
-      alert("System access requires all credentials.");
-      return;
+    if (step === 1) {
+      if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
+        alert("System access requires all credentials.");
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        alert("Passwords do not match.");
+        return;
+      }
     }
     if (step === 2 && (!formData.socialLinks.github || !formData.socialLinks.linkedin)) {
       alert("GitHub and LinkedIn are mandatory protocols for Hacker Identity.");
@@ -106,10 +114,15 @@ const Signup = () => {
 
   const handleSubmit = async () => {
     try {
+      if (formData.password !== formData.confirmPassword) {
+        alert("Passwords do not match.");
+        return;
+      }
       const data = new FormData();
       data.append('username', formData.username);
       data.append('email', formData.email);
       data.append('password', formData.password);
+      data.append('confirmPassword', formData.confirmPassword);
       data.append('team_role', formData.team_role);
       data.append('location', formData.location);
       data.append('socialLinks', JSON.stringify(formData.socialLinks));
@@ -192,7 +205,29 @@ const Signup = () => {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-mono text-gray-500 uppercase tracking-widest">Password</label>
-                    <input type="password" value={formData.password} onChange={e => updateForm('password', e.target.value)} placeholder="••••••••" className="w-full bg-black border border-white/10 px-4 py-3 text-white focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-colors brutal-border" />
+                    <div className="relative">
+                      <input type={showPassword ? "text" : "password"} value={formData.password} onChange={e => updateForm('password', e.target.value)} placeholder="••••••••" className="w-full bg-black border border-white/10 pl-4 pr-10 py-3 text-white focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-colors brutal-border" />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-accent transition-colors cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-mono text-gray-500 uppercase tracking-widest">Confirm Password</label>
+                    <div className="relative">
+                      <input type={showConfirmPassword ? "text" : "password"} value={formData.confirmPassword} onChange={e => updateForm('confirmPassword', e.target.value)} placeholder="••••••••" className="w-full bg-black border border-white/10 pl-4 pr-10 py-3 text-white focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-colors brutal-border" />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-accent transition-colors cursor-pointer"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </motion.div>

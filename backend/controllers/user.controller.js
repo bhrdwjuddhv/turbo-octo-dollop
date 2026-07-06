@@ -23,11 +23,15 @@ const generateAccessAndRefreshTokens = async(userId) =>{
 const registerUser = async (req, res, next) => {
     try {
         console.log("Registration process started...");
-        const { username, email, password, team_role, location, techStack, experience, preferences, projects, socialLinks } = req.body;
-        console.log("Request Body received:", { username, email, hasPassword: !!password });
+        const { username, email, password, confirmPassword, team_role, location, techStack, experience, preferences, projects, socialLinks } = req.body;
+        console.log("Request Body received:", { username, email, hasPassword: !!password, hasConfirmPassword: !!confirmPassword });
 
-        if ([username, email, password].some((field) => !field || field.trim() === "")) {
-            return res.status(400).json(new ApiResponse(400, null, "Username, email and password are required"));
+        if ([username, email, password, confirmPassword].some((field) => !field || field.trim() === "")) {
+            return res.status(400).json(new ApiResponse(400, null, "Username, email, password, and confirm password are required"));
+        }
+
+        if (password !== confirmPassword) {
+            return res.status(400).json(new ApiResponse(400, null, "Passwords do not match"));
         }
 
         const existedUser = await User.findOne({
