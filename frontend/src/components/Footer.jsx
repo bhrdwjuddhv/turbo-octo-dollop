@@ -1,5 +1,5 @@
 import React from 'react';
-import { Code2, GitBranch, MessageCircle } from 'lucide-react';
+import { GitBranch, MessageCircle } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -8,11 +8,12 @@ const Footer = () => {
         <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-8 mb-12">
           
           <div className="flex flex-col items-center md:items-start">
-            <div className="flex items-center gap-2 mb-4">
-              <Code2 className="h-6 w-6 text-primary" />
-              <span className="font-bold text-lg tracking-tight text-text-main">
-                HackMatch
-              </span>
+            <div className="flex items-center mb-4">
+              <img 
+                src="/assets/h4.png" 
+                alt="HackMatch Logo" 
+                className="h-16 w-auto object-contain"
+              />
             </div>
             <p className="text-gray-500 text-sm max-w-xs text-center md:text-left">
               The premier platform for developers, designers, and AI engineers to find their perfect hackathon team.

@@ -79,9 +79,12 @@ const Discovery = () => {
 
       {/* Header */}
       <header className="w-full max-w-lg p-6 flex justify-between items-center relative z-10">
-        <div className="flex items-center gap-2">
-          <Code2 className="w-6 h-6 text-primary" />
-          <span className="font-black text-xl uppercase tracking-tighter">HackMatch</span>
+        <div className="flex items-center">
+          <img 
+            src="/assets/h4.png" 
+            alt="HackMatch Logo" 
+            className="h-12 w-auto object-contain" 
+          />
         </div>
         <div className="flex items-center gap-4">
           <Link to="/profile" className="text-gray-500 hover:text-white transition-colors flex items-center gap-2">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Code2, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -20,16 +20,15 @@ const Navbar = () => {
   return (
     <nav className="fixed w-full z-50 top-6 transition-all duration-300 pointer-events-none px-6 sm:px-10">
       <div className="max-w-[1400px] mx-auto">
-        <div className="flex items-center justify-between h-16 bg-black/80 backdrop-blur-md border border-white/10 rounded-full px-8 pointer-events-auto shadow-2xl">
+        <div className="flex items-center justify-between h-20 bg-black/80 backdrop-blur-md border border-white/10 rounded-full px-8 pointer-events-auto shadow-2xl">
           
           {/* Logo */}
-          <Link to="/" className="flex-shrink-0 flex items-center gap-2 cursor-pointer group">
-            <div className="w-6 h-6 bg-primary rounded-sm flex items-center justify-center group-hover:rotate-180 transition-transform duration-500">
-              <Code2 className="h-4 w-4 text-black" />
-            </div>
-            <span className="font-bold text-lg tracking-tight uppercase">
-              HackMatch
-            </span>
+          <Link to="/" className="flex-shrink-0 flex items-center cursor-pointer group">
+            <img 
+              src="/assets/h4.png" 
+              alt="HackMatch Logo" 
+              className="h-16 w-auto object-contain transition-all duration-300 group-hover:scale-105" 
+            />
           </Link>
 
           {/* Desktop Nav */}

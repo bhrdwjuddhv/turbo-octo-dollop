@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Code2, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
@@ -40,11 +40,12 @@ const Login = () => {
         <h1 className="text-[25vw] font-black tracking-tighter text-stroke leading-none absolute whitespace-nowrap">INIT</h1>
       </div>
 
-      <Link to="/" className="absolute top-8 left-8 flex items-center gap-2 group z-50">
-        <div className="w-8 h-8 bg-primary rounded-sm flex items-center justify-center group-hover:rotate-90 transition-transform duration-500">
-          <Code2 className="w-5 h-5 text-black" />
-        </div>
-        <span className="font-bold text-xl tracking-tight uppercase group-hover:text-primary transition-colors">HackMatch</span>
+      <Link to="/" className="absolute top-8 left-8 flex items-center group z-50">
+        <img 
+          src="/assets/h4.png" 
+          alt="HackMatch Logo" 
+          className="h-20 w-auto object-contain transition-all duration-300 group-hover:scale-105" 
+        />
       </Link>
 
       <motion.div 
