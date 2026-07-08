@@ -14,6 +14,7 @@ import Privacy from './pages/Privacy';
 import Contact from './pages/Contact';
 import { AuthProvider } from './modules/auth/context/AuthContext';
 import ProtectedRoute from './modules/auth/components/ProtectedRoute';
+import TaskBoard from "./modules/team-management/task-board/taskBoard.jsx";
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/contact" element={<Contact />} />
+              <Route path="/task-board" element={<TaskBoard />} />
             <Route 
               path="/dashboard" 
               element={
