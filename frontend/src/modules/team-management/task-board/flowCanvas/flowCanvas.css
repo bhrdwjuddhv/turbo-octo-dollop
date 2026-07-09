@@ -4,8 +4,27 @@
  * Colours are intentionally light/muted regardless of the app's dark theme.
  */
 
+/* --- Pane background -------------------------------------------------------
+ * The pane colour is owned SOLELY by these two rules (theme-driven), so it is
+ * identical whether or not the dot pattern is showing.
+ *
+ * React Flow's <Background> renders an svg.react-flow__background that, by
+ * default, paints a full-pane fill:
+ *     background-color: var(--xy-background-color-props,
+ *                       var(--xy-background-color,
+ *                       var(--xy-background-color-default)));
+ * In dark mode `.react-flow.dark` sets --xy-background-color-default: #141414,
+ * so that svg used to cover the pane with #141414 while dots were ON, and
+ * unmounting it (dots OFF) revealed our own darker-blue root beneath — a
+ * colour "flood" on toggle. Forcing the svg transparent means it only ever
+ * draws the dot pattern and never a pane fill.
+ */
 .flow-canvas {
     background-color: #fcfcfd;
+}
+
+.flow-canvas .react-flow__background {
+    background-color: transparent;
 }
 
 /* --- Connection handles: hidden until the node is hovered --- */

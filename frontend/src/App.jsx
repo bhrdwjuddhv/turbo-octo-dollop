@@ -15,6 +15,7 @@ import Contact from './pages/Contact';
 import { AuthProvider } from './modules/auth/context/AuthContext';
 import ProtectedRoute from './modules/auth/components/ProtectedRoute';
 import TaskBoard from "./modules/team-management/task-board/taskBoard.jsx";
+import TeamCalendar from "./modules/team-management/calendar/teamCalendar.jsx";
 
 function App() {
   return (
@@ -66,6 +67,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <TeamDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teams/:teamId/calendar"
+              element={
+                <ProtectedRoute>
+                  <TeamCalendar />
                 </ProtectedRoute>
               }
             />

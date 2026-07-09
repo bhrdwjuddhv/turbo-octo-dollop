@@ -16,10 +16,14 @@ import {
 import '@xyflow/react/dist/style.css';
 import './flowCanvas.css';
 
+import { useAuth } from '../../../auth/context/AuthContext.jsx';
 import { nodeTypes } from './nodes/nodeTypes.js';
 import { edgeTypes } from './edges/edgeTypes.js';
 import FloatingConnectionLine from './edges/floatingConnectionLine.jsx';
 import FloatingToolbar from './toolbar/floatingToolbar.jsx';
+import useCollaboration from './collab/useCollaboration.js';
+import CollabCursors from './collab/collabCursors.jsx';
+import PresenceBar from './collab/presenceBar.jsx';
 import { DEFAULT_NODE_STYLE, CANVAS_EXTENT } from './config/canvasConfig.js';
 
 /** Kept from the original module so existing sample data still renders. */
@@ -50,11 +54,14 @@ const COLOR_MODES = ['light', 'dark', 'system'];
 const uid = () =>
     (crypto.randomUUID?.() ?? `n-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-function Canvas() {
+function Canvas({ boardId }) {
     const wrapperRef = useRef(null);
     const { screenToFlowPosition } = useReactFlow();
+    const auth = useAuth();
 
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+    // When collaborating, the board's contents arrive from the Yjs sync — don't
+    // seed local sample state or we'd push it into the shared document.
+    const [nodes, setNodes, onNodesChange] = useNodesState(boardId ? [] : initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
     // Style applied to newly created nodes (mirrors the toolbar when nothing
@@ -164,14 +171,56 @@ function Canvas() {
         setSelectedIds([]);
     }, [selectedIds, setNodes, setEdges]);
 
+    // Real-time collaboration. No boardId -> `enabled: false` and every handler
+    // is a no-op, so the canvas behaves exactly as it does standalone.
+    const {
+        enabled: collabEnabled,
+        synced,
+        connected,
+        error: collabError,
+        peers,
+        remoteSelections,
+        onPointerMove,
+        onPointerLeave,
+    } = useCollaboration({
+        boardId,
+        user: auth?.user,
+        nodes,
+        edges,
+        setNodes,
+        setEdges,
+        selectedIds,
+        screenToFlowPosition,
+    });
+
+    // Outline nodes that a remote collaborator currently has selected.
+    const renderedNodes = useMemo(() => {
+        if (!collabEnabled) return nodes;
+        return nodes.map((node) => {
+            const color = remoteSelections[node.id];
+            if (!color) return node;
+            return {
+                ...node,
+                style: {
+                    ...node.style,
+                    outline: `2px solid ${color}`,
+                    outlineOffset: 3,
+                    borderRadius: 12,
+                },
+            };
+        });
+    }, [nodes, collabEnabled, remoteSelections]);
+
     return (
         <div
             ref={wrapperRef}
             className={`flow-canvas-shell relative h-full w-full${isDark ? ' dark' : ''}`}
+            onPointerMove={collabEnabled ? onPointerMove : undefined}
+            onPointerLeave={collabEnabled ? onPointerLeave : undefined}
         >
             <ReactFlow
                 className="flow-canvas"
-                nodes={nodes}
+                nodes={renderedNodes}
                 edges={edges}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
@@ -211,7 +260,18 @@ function Canvas() {
                     }
                     className="!rounded-xl !shadow-lg"
                 />
+
+                {collabEnabled && <CollabCursors peers={peers} />}
             </ReactFlow>
+
+            {collabEnabled && (
+                <PresenceBar
+                    peers={peers}
+                    connected={connected}
+                    synced={synced}
+                    error={collabError}
+                />
+            )}
 
             <FloatingToolbar
                 onAddNode={addNode}
@@ -231,11 +291,21 @@ function Canvas() {
 /**
  * Public entry. Wrapped in ReactFlowProvider so the toolbar and canvas can both
  * use React Flow hooks (screenToFlowPosition, etc.).
+ *
+ * Collaboration turns on only when a board id is supplied — either via the
+ * `boardId` prop or a `?board=<flowboardId>` query param. Without one the canvas
+ * runs purely locally, exactly as before.
  */
-export default function FlowCanvas() {
+export default function FlowCanvas({ boardId: boardIdProp }) {
+    const boardId = useMemo(() => {
+        if (boardIdProp) return boardIdProp;
+        if (typeof window === 'undefined') return null;
+        return new URLSearchParams(window.location.search).get('board');
+    }, [boardIdProp]);
+
     return (
         <ReactFlowProvider>
-            <Canvas />
+            <Canvas boardId={boardId} />
         </ReactFlowProvider>
     );
 }

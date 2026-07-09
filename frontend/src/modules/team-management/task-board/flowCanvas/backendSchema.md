@@ -296,3 +296,56 @@ so a hand-crafted payload can't bypass the client-side bounds.
   on error) to match the existing `team`/`matching` modules' fetch handling.
 - **Numbers stay numbers.** `position.x/y`, `width`, `height`, `fontSize`,
   `fontWeight`, and `viewport.zoom` must serialise as JSON numbers, not strings.
+
+---
+
+## 6. Real-time collaboration (Yjs over Socket.io)
+
+**No schema change.** Collaboration adds **zero new fields** to the FlowBoard
+document. The Yjs binary is deliberately **not** persisted, and there is no
+`lastEditedBy`. The document above remains the single source of truth.
+
+### Persistence reconciliation
+
+```txt
+first client joins room
+  -> server loads the FlowBoard doc from Mongo
+  -> seeds an in-memory Y.Doc: nodes/edges become Y.Maps keyed by element id
+clients collaborate live in Yjs (server relays updates, stays authoritative)
+  -> every update schedules a debounced write (1.5s, max 10s under continuous edits)
+  -> writer serialises the Y.Doc back to { nodes, edges } and $sets it on the doc
+last client leaves
+  -> final flush, then the Y.Doc is destroyed
+```
+
+- **Why not persist the Yjs state as a blob?** A binary CRDT field would become a
+  second, competing source of truth: the REST `GET`/`PUT` round-trip and the
+  blob could drift, and every REST consumer would need a Yjs decoder. Seeding
+  from — and flushing back to — the existing JSON keeps one authority, keeps the
+  REST API usable unchanged, and lets late joiners and non-collaborative reads
+  see current state. The tradeoff: Yjs edit history / offline-merge beyond the
+  live session is not retained, and a crash can lose up to the debounce window
+  (≤10s) of edits. Both are acceptable for a whiteboard.
+- The collaborative writer `$set`s **only `nodes` and `edges`** — it never
+  touches `viewport`, which stays owned by the REST save.
+- Server-side it re-applies the same guards as `PUT`: node/edge count caps and
+  clamping `position` into `CANVAS_EXTENT`.
+
+### Socket.io contract
+
+Namespace **`/flowboard`**, one room per board (`flowboard:<boardId>`). Handshake
+auth reuses the existing httpOnly `accessToken` cookie and the same JWT secret /
+`User` lookup as `verifyJWT`; joining a room re-checks team membership exactly
+like the REST endpoints (leader or member of the board's `teamId`).
+
+| Event | Direction | Payload | Notes |
+|---|---|---|---|
+| `flowboard:join` | client → server | `{ boardId, clientId }` | `clientId` is the Yjs awareness id |
+| `flowboard:sync` | server → client | `{ boardId, update, stateVector }` | full server state + SV, sent on join |
+| `flowboard:update` | both ways | `{ boardId, update }` | raw Yjs update (`Uint8Array`) |
+| `flowboard:awareness` | both ways | `{ boardId, update }` | Yjs awareness — presence only, **never persisted** |
+| `flowboard:peer-left` | server → client | `{ boardId, clientId }` | drop that peer's cursor immediately |
+| `flowboard:leave` | client → server | — | also fired implicitly on `disconnect` |
+| `flowboard:error` | server → client | `{ success: false, message }` | same envelope style as REST errors |
+
+Awareness carries `{ user: { id, name, color }, cursor: { x, y } | null, selection: string[] }`.
