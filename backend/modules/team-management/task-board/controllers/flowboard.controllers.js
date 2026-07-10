@@ -93,6 +93,23 @@ const validateFlowPayload = ({ nodes, edges }) => {
     }
 };
 
+// Loads a team and asserts the caller belongs to it. Returns the team.
+const loadTeamForUser = async (teamId, userId) => {
+    if (!teamId || !mongoose.isValidObjectId(teamId)) {
+        throw new ApiError(400, "A valid teamId is required");
+    }
+
+    const team = await Team.findById(teamId);
+
+    if (!team) {
+        throw new ApiError(404, "Team not found");
+    }
+
+    assertTeamMembership(team, userId);
+
+    return team;
+};
+
 // Loads a board's owning team and asserts the caller belongs to it.
 // Returns { board, team }.
 const loadBoardForUser = async (boardId, userId) => {
@@ -201,6 +218,33 @@ const getFlowBoards = asyncHandler(async (req, res) => {
             boards,
             "Boards fetched successfully"
         )
+    );
+});
+
+// GET /api/v1/task-boards/team/:teamId  (get-or-create this team's board)
+// The clean entry point for opening a team's task board: the frontend has a
+// teamId (from the route) but not a boardId. Returns the team's single board,
+// creating an empty one on first open. Idempotent for non-premium teams (the
+// 1-board limit means findOne always resolves to the same board).
+const resolveTeamBoard = asyncHandler(async (req, res) => {
+
+    const { teamId } = req.params;
+
+    const team = await loadTeamForUser(teamId, req.user?._id);
+
+    let board = await FlowBoard.findOne({ teamId }).sort({ createdAt: 1 });
+
+    if (!board) {
+        board = await FlowBoard.create({
+            teamId,
+            createdBy: req.user?._id,
+            nodes: [],
+            edges: []
+        });
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, board, "Board resolved successfully")
     );
 });
 
@@ -320,6 +364,7 @@ const deleteFlowBoard = asyncHandler(async (req, res) => {
 export {
     createFlowBoard,
     getFlowBoards,
+    resolveTeamBoard,
     getFlowBoardById,
     updateFlowBoard,
     patchFlowBoard,

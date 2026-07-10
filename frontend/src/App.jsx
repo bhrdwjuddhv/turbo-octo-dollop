@@ -7,7 +7,7 @@ import Discovery from './modules/matching/pages/Discovery';
 import Profile from './modules/auth/pages/Profile';
 import TeamsPage from './modules/team/pages/TeamsPage';
 import CreateTeamPage from './modules/team/pages/CreateTeamPage';
-import TeamDetailPage from './modules/team/pages/TeamDetailPage';
+import TeamDashboard from './modules/team-management/dashboard/teamDashboard';
 import InvitesPage from './modules/invite/pages/InvitesPage';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
@@ -66,7 +66,15 @@ function App() {
               path="/teams/:teamId"
               element={
                 <ProtectedRoute>
-                  <TeamDetailPage />
+                  <TeamDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teams/:teamId/task-board"
+              element={
+                <ProtectedRoute>
+                  <TaskBoard />
                 </ProtectedRoute>
               }
             />

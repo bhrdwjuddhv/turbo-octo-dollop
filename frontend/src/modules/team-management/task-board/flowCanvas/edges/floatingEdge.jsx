@@ -1,4 +1,4 @@
-import { getBezierPath, useInternalNode } from '@xyflow/react';
+import { BaseEdge, getBezierPath, useInternalNode } from '@xyflow/react';
 import { getEdgeParams } from './floatingEdgeUtils.js';
 
 /**
@@ -9,6 +9,11 @@ import { getEdgeParams } from './floatingEdgeUtils.js';
  *
  * `useInternalNode` subscribes to the store, so the edge re-routes as nodes are
  * dragged or resized.
+ *
+ * Rendered via <BaseEdge> (not a raw <path>) so React Flow also lays down a
+ * wide, invisible interaction path: `interactionWidth` gives the hairline a
+ * ~20px click target, without which the edge is almost impossible to select —
+ * and an edge you can't select is an edge you can't delete.
  */
 export default function FloatingEdge({ id, source, target, markerEnd, style }) {
     const sourceNode = useInternalNode(source);
@@ -31,12 +36,12 @@ export default function FloatingEdge({ id, source, target, markerEnd, style }) {
     });
 
     return (
-        <path
+        <BaseEdge
             id={id}
-            className="react-flow__edge-path"
-            d={edgePath}
+            path={edgePath}
             markerEnd={markerEnd}
             style={style}
+            interactionWidth={20}
         />
     );
 }

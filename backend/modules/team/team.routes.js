@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createTeam, joinTeam , leaveTeam, updateTeam , deleteTeam, discoverTeams, getTeamById} from "./team.controller.js";
+import { createTeam, requestToJoin, leaveTeam, updateTeam, deleteTeam, discoverTeams, getTeamById, getTeamDashboard, respondToJoinRequest, removeMember } from "./team.controller.js";
 import { upload } from "../../middlewares/multer.middleware.js"
 import { verifyJWT } from "../../middlewares/auth.middleware.js";
 
@@ -56,9 +56,24 @@ router.route("/:teamId").delete(
     deleteTeam
 );
 
+router.route("/:teamId/dashboard").get(
+    verifyJWT,
+    getTeamDashboard
+);
+
 router.route("/:teamId/join").post(
     verifyJWT,
-    joinTeam
+    requestToJoin
+);
+
+router.route("/:teamId/requests/:requestId/respond").post(
+    verifyJWT,
+    respondToJoinRequest
+);
+
+router.route("/:teamId/members/:userId").delete(
+    verifyJWT,
+    removeMember
 );
 
 router.route("/:teamId/leave").post(
