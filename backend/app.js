@@ -5,6 +5,7 @@ import userRouter from './modules/auth/user.routes.js'
 import teamRouter from './modules/team/team.routes.js'
 import inviteRouter from './modules/invite/invite.routes.js'
 import matchingRouter from './modules/matching/matching.routes.js'
+import reputationRouter from './modules/reputation/reputation.routes.js';
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use("/api/v1/users", userRouter)
 app.use("/api/v1/teams", teamRouter)
 app.use("/api/v1/invites", inviteRouter)
 app.use("/api/v1/matching", matchingRouter)
+app.use("/api/v1/reputation", reputationRouter);
 
 // error handler
 app.use((err, req, res, next) => {

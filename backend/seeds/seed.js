@@ -37,6 +37,7 @@ import {
     PROJECT_IDEAS,
     HACKATHON_NAMES,
     CITIES,
+    WORKING_HOURS_OPTIONS,
 } from "../constants/techStack.constants.js";
 
 // ------------------------------------------------------------------
@@ -94,6 +95,17 @@ function bannerImageUrl(seed) {
     return `https://picsum.photos/seed/${encodeURIComponent(seed)}-banner/1600/400`;
 }
 
+// Weighted so most teams haven't "finished" a hackathon yet (realistic -
+// most teams are mid-formation), but enough have results to make the
+// reputation/badges system visible in demo data.
+function weightedTeamResult() {
+    const r = Math.random();
+    if (r < 0.5) return "not_specified";
+    if (r < 0.75) return "participated";
+    if (r < 0.90) return "finalist";
+    return "winner";
+}
+
 // ------------------------------------------------------------------
 // User generation
 // ------------------------------------------------------------------
@@ -148,6 +160,7 @@ function buildUsers(count, hashedPassword) {
             team_role: rand(ROLES),
             experienceLevel: rand(EXPERIENCE_LEVELS),
             availability: Math.random() < 0.85, // ~85% mark themselves available
+            workingHours: rand(WORKING_HOURS_OPTIONS),
             location: rand(CITIES),
             techStack,
             experience,
@@ -235,6 +248,7 @@ function buildTeams(count, insertedUsers) {
             status: "open", // may flip to "closed" after filling members
             hackathonName: rand(HACKATHON_NAMES),
             projectIdea: rand(PROJECT_IDEAS),
+            result: weightedTeamResult(),
         });
     }
 

@@ -1,4 +1,4 @@
-// src/constants/techStack.constants.js
+// backend/constants/techStack.constants.js
 //
 // Central pool of skills / roles / interests used across the platform.
 // Import TECH_STACK wherever you validate/autocomplete a user's or team's
@@ -198,4 +198,21 @@ export const CITIES = [
     "Vadodara, Gujarat",
     "Mysuru, Karnataka",
     "Nashik, Maharashtra",
+];
+
+// NEW - Phase 4 (working hours compatibility signal)
+export const WORKING_HOURS_OPTIONS = [
+    "Early Bird (6AM - 12PM)",
+    "Daytime (12PM - 6PM)",
+    "Evening (6PM - 12AM)",
+    "Night Owl (12AM - 6AM)",
+    "Flexible / Anytime",
+];
+
+// NEW - Phase 6 (drives hackathonsWon / hackathonsParticipated on Team)
+export const TEAM_RESULTS = [
+    "not_specified",
+    "participated",
+    "finalist",
+    "winner",
 ];

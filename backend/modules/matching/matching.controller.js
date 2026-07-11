@@ -7,10 +7,12 @@ import {
     rankUsersForUser,
     rankTeamsForUser,
     rankUsersForTeam,
+    explainUserForUser,
+    explainUserForTeam,
 } from "../../services/matching.service.js";
 
 const PUBLIC_USER_FIELDS =
-    "username fullName avatar coverImage bio location techStack experience preferences team_role experienceLevel availability socialLinks";
+    "username fullName avatar coverImage bio location techStack experience preferences team_role experienceLevel availability workingHours socialLinks";
 
 // GET /api/v1/matching/users
 // Ranked teammate suggestions for the logged-in user.
@@ -39,6 +41,7 @@ const getMatchedUsers = asyncHandler(async (req, res) => {
                     user,
                     matchScore: score,
                     matchBreakdown: breakdown,
+                    matchExplanation: explainUserForUser(breakdown),
                 })),
                 pagination: {
                     totalMatches: ranked.length,
@@ -66,7 +69,7 @@ const getMatchedTeams = asyncHandler(async (req, res) => {
         status: "open",
         members: { $ne: currentUser._id },
         $expr: { $lt: [{ $size: "$members" }, "$maxMembers"] },
-    }).populate("members", "team_role location techStack experienceLevel availability _id");
+    }).populate("members", "team_role location techStack experienceLevel availability workingHours _id");
 
     const teamsWithMembers = openTeams.map((team) => ({
         team,
@@ -86,6 +89,7 @@ const getMatchedTeams = asyncHandler(async (req, res) => {
                     team,
                     matchScore: score,
                     matchBreakdown: breakdown,
+                    matchExplanation: explainUserForTeam(breakdown),
                 })),
                 pagination: {
                     totalMatches: ranked.length,
@@ -107,7 +111,7 @@ const getMatchedCandidatesForTeam = asyncHandler(async (req, res) => {
 
     const team = await Team.findById(teamId).populate(
         "members",
-        "team_role location techStack experienceLevel availability _id"
+        "team_role location techStack experienceLevel availability workingHours _id"
     );
 
     if (!team) {
@@ -123,7 +127,7 @@ const getMatchedCandidatesForTeam = asyncHandler(async (req, res) => {
     const candidates = await User.find({
         _id: { $nin: [...memberIds, team.leader.toString()] },
     }).select(
-        "username fullName avatar bio location techStack preferences team_role experienceLevel availability"
+        "username fullName avatar bio location techStack preferences experience team_role experienceLevel availability workingHours"
     );
 
     const ranked = rankUsersForTeam(team, team.members, candidates);
@@ -139,6 +143,7 @@ const getMatchedCandidatesForTeam = asyncHandler(async (req, res) => {
                     user,
                     matchScore: score,
                     matchBreakdown: breakdown,
+                    matchExplanation: explainUserForTeam(breakdown),
                 })),
                 pagination: {
                     totalMatches: ranked.length,

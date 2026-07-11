@@ -27,23 +27,36 @@ import {
   Terminal,
   Palette,
   Cpu,
-  Atom
+  Atom,
+  Sparkles
 } from 'lucide-react';
 import Navbar from '../../../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+
+const WORKING_HOURS_OPTIONS = [
+  "Early Bird (6AM - 12PM)",
+  "Daytime (12PM - 6PM)",
+  "Evening (6PM - 12AM)",
+  "Night Owl (12AM - 6AM)",
+  "Flexible / Anytime",
+];
 
 const Profile = () => {
   const { user, login } = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editStep, setEditStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
+  const [reputation, setReputation] = useState(null);
+  const [badges, setBadges] = useState([]);
+  const [reputationLoading, setReputationLoading] = useState(true);
   
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
     location: user?.location || '',
     bio: user?.bio || '',
     team_role: user?.team_role || '',
+    workingHours: user?.workingHours || 'Flexible / Anytime',
     socialLinks: {
       github: user?.socialLinks?.github || '',
       linkedin: user?.socialLinks?.linkedin || '',
@@ -58,6 +71,7 @@ const Profile = () => {
         location: user.location || '',
         bio: user.bio || '',
         team_role: user.team_role || '',
+        workingHours: user.workingHours || 'Flexible / Anytime',
         socialLinks: {
           github: user.socialLinks?.github || '',
           linkedin: user.socialLinks?.linkedin || '',
@@ -66,6 +80,27 @@ const Profile = () => {
       });
     }
   }, [user]);
+
+  // Phase 6/7: reputation stats + badges - fully derived server-side from
+  // real platform activity (teams, invites, projects), nothing manually set.
+  useEffect(() => {
+    const fetchReputation = async () => {
+      if (!user?._id) return;
+      setReputationLoading(true);
+      try {
+        const res = await axios.get(`/api/v1/reputation/${user._id}`, {
+          withCredentials: true
+        });
+        setReputation(res.data?.data?.reputation || null);
+        setBadges(res.data?.data?.badges || []);
+      } catch (err) {
+        console.error('Failed to fetch reputation:', err);
+      } finally {
+        setReputationLoading(false);
+      }
+    };
+    fetchReputation();
+  }, [user?._id]);
 
   const handleUpdate = async () => {
     try {
@@ -114,10 +149,11 @@ const Profile = () => {
     tagline: user?.bio || "",
     avatar: user?.avatar || null,
     stats: {
-      hackathons: "",
-      wins: "",
-      rating: "",
-      matchRate: ""
+      // Phase 6: wired to real, derived reputation stats instead of
+      // permanently-empty placeholders.
+      hackathons: reputation?.hackathonsParticipated ?? "",
+      wins: reputation?.hackathonsWon ?? "",
+      rating: reputation ? `${reputation.reliability}%` : "",
     },
     socials: [
       ...(user?.socialLinks?.github ? [{ name: 'GitHub', icon: <Code2 size={16} />, url: user.socialLinks.github }] : []),
@@ -136,12 +172,6 @@ const Profile = () => {
           core: []
         }
     };
-
-  const activity = [
-    { type: 'win', content: 'Secured 1st Place at Global AI Hack 2024', date: '2 DAYS AGO' },
-    { type: 'commit', content: 'Deployed NeuralSync v4.0.1 to Mainnet', date: '5 HOURS AGO' },
-    { type: 'team', content: 'Joined Elite Squad "Cyber_Ghost"', date: '1 WEEK AGO' }
-  ];
 
   return (
     <div className="min-h-screen bg-[#0B0F1A] text-slate-200 font-sans selection:bg-[#97ce23] selection:text-black">
@@ -185,7 +215,7 @@ const Profile = () => {
             {[
               { label: 'Hackathons', val: profileData.stats.hackathons, icon: <Trophy size={14} /> },
               { label: 'Wins', val: profileData.stats.wins, icon: <Award size={14} /> },
-              { label: 'Team Rating', val: profileData.stats.rating, icon: <Heart size={14} /> }
+              { label: 'Reliability', val: profileData.stats.rating, icon: <Heart size={14} /> }
             ].map(stat => (
               <div key={stat.label} className="text-center group">
                 <div className="flex items-center gap-2 justify-center text-slate-500 mb-1 group-hover:text-[#97ce23] transition-colors">
@@ -221,6 +251,10 @@ const Profile = () => {
                     <div className="p-2 bg-slate-800 rounded-lg"><Globe size={14} className="text-[#4F46E5]" /></div>
                     <span>{user?.username ? `${user.username}.dev` : ""}</span>
                   </div>
+                  <div className="flex items-center gap-4 text-sm text-slate-400 hover:text-white transition-colors cursor-default">
+                    <div className="p-2 bg-slate-800 rounded-lg"><Clock size={14} className="text-[#97ce23]" /></div>
+                    <span>{user?.workingHours || "Flexible / Anytime"}</span>
+                  </div>
                 </div>
               </div>
 
@@ -253,7 +287,7 @@ const Profile = () => {
               </button>
             </motion.div>
 
-            {/* STATUS CARD */}
+            {/* STATUS CARD - now wired to real availability instead of hardcoded text */}
             <motion.div 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -262,15 +296,86 @@ const Profile = () => {
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-[10px] font-black text-[#97ce23] uppercase tracking-widest">Protocol_Status_</h3>
-                <div className="w-2 h-2 rounded-full bg-[#97ce23] animate-pulse"></div>
+                <div className={`w-2 h-2 rounded-full animate-pulse ${user?.availability === false ? 'bg-slate-600' : 'bg-[#97ce23]'}`}></div>
               </div>
-              <p className="text-sm font-black text-white uppercase tracking-tighter mb-2">Available for Hack_</p>
-              <p className="text-[11px] text-slate-500 font-medium leading-relaxed">Actively seeking high-performance teams in AI/ML or Web3 sectors.</p>
+              <p className="text-sm font-black text-white uppercase tracking-tighter mb-2">
+                {user?.availability === false ? 'Not Available_' : 'Available for Hack_'}
+              </p>
+              <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                {user?.preferences?.length
+                  ? `Interested in ${user.preferences.slice(0, 2).join(' and ')}.`
+                  : 'Actively seeking high-performance teams.'}
+              </p>
+            </motion.div>
+
+            {/* REPUTATION CARD - Phase 6, fully derived */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.15 }}
+              className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[2.5rem] p-8 space-y-5"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-[10px] font-black text-[#4F46E5] uppercase tracking-widest">Reputation_</h3>
+                <span className="text-2xl font-black text-white tracking-tighter">
+                  {reputationLoading ? '···' : reputation?.reputationScore ?? 0}
+                </span>
+              </div>
+              {reputationLoading ? (
+                <p className="text-[11px] text-slate-600 font-mono uppercase">Calculating_</p>
+              ) : (
+                <div className="space-y-3 text-[11px] font-mono">
+                  <div className="flex justify-between text-slate-400"><span>Projects Completed</span><span className="text-white">{reputation?.completedProjects ?? 0}</span></div>
+                  <div className="flex justify-between text-slate-400"><span>Open Source</span><span className="text-white">{reputation?.openSourceContributions ?? 0}</span></div>
+                  <div className="flex justify-between text-slate-400"><span>Community Activity</span><span className="text-white">{reputation?.communityActivity ?? 0}</span></div>
+                  <div className="flex justify-between text-slate-400"><span>Teams Led</span><span className="text-white">{reputation?.teamsLed ?? 0}</span></div>
+                </div>
+              )}
             </motion.div>
           </aside>
 
           {/* MAIN CONTENT (9 COLS) */}
           <div className="lg:col-span-9 space-y-12">
+
+            {/* BADGES SECTION - Phase 7 */}
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-8"
+            >
+              <div className="flex items-center justify-between px-2">
+                <h3 className="text-xs font-black text-white uppercase tracking-[0.4em] flex items-center gap-4">
+                  <div className="w-8 h-px bg-[#4F46E5]/50"></div>
+                  Badges_
+                </h3>
+              </div>
+              {reputationLoading ? (
+                <p className="text-[11px] text-slate-600 font-mono uppercase px-2">Scanning achievements_</p>
+              ) : badges.length === 0 ? (
+                <div className="bg-slate-900/40 border border-dashed border-slate-800 rounded-[1.5rem] p-8 text-center">
+                  <Sparkles className="w-6 h-6 text-slate-700 mx-auto mb-3" />
+                  <p className="text-[11px] text-slate-600 font-mono uppercase tracking-widest">No badges earned yet_</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {badges.map((badge) => (
+                    <div
+                      key={badge.id}
+                      title={badge.description}
+                      className="bg-slate-900/40 border border-[#4F46E5]/30 p-5 rounded-[1.5rem] hover:bg-slate-800 transition-all group relative overflow-hidden cursor-default"
+                    >
+                      <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#4F46E5] shadow-[0_0_15px_currentColor] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <div className="p-2 rounded-lg bg-slate-800/50 text-[#4F46E5] w-fit mb-3 group-hover:scale-110 transition-transform">
+                        <Trophy size={16} />
+                      </div>
+                      <span className="text-[10px] font-black uppercase text-slate-300 group-hover:text-white transition-colors tracking-widest leading-tight block">
+                        {badge.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.section>
             
             {/* ARSENAL SECTION */}
             <motion.section 
@@ -439,6 +544,7 @@ const Profile = () => {
                       <div className="flex justify-between text-slate-300"><span className="text-slate-500">NAME:</span> <span>{user?.fullName}</span></div>
                       <div className="flex justify-between text-slate-300"><span className="text-slate-500">ROLE:</span> <span>{user?.team_role || "Not Set"}</span></div>
                       <div className="flex justify-between text-slate-300"><span className="text-slate-500">LOC:</span> <span>{user?.location || "Remote"}</span></div>
+                      <div className="flex justify-between text-slate-300"><span className="text-slate-500">HOURS:</span> <span>{user?.workingHours || "Flexible / Anytime"}</span></div>
                       <div className="flex justify-between items-start gap-4 text-slate-300">
                         <span className="text-slate-500">BIO:</span> 
                         <span className="text-right line-clamp-2">{user?.bio || "No data"}</span>
@@ -472,6 +578,23 @@ const Profile = () => {
                           <label className="text-[10px] font-mono text-slate-500 uppercase">Location</label>
                           <input type="text" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} className="w-full bg-black border border-slate-800 rounded-xl px-4 py-3 text-sm focus:border-[#97ce23] outline-none text-white" placeholder="Berlin, DE" />
                         </div>
+                      </div>
+
+                      {/* NEW (Phase 4): working hours - feeds the matching
+                          engine's "working hours compatibility" signal.
+                          Without this being settable, that signal would
+                          always default to neutral for everyone. */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-mono text-slate-500 uppercase">Preferred Working Hours</label>
+                        <select
+                          value={formData.workingHours}
+                          onChange={(e) => setFormData({...formData, workingHours: e.target.value})}
+                          className="w-full bg-black border border-slate-800 rounded-xl px-4 py-3 text-sm focus:border-[#97ce23] outline-none text-white appearance-none cursor-pointer"
+                        >
+                          {WORKING_HOURS_OPTIONS.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
                       </div>
 
                       <div className="space-y-2">

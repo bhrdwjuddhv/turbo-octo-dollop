@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Users, Calendar, MapPin, Zap, Send, LogOut, Trash2, Crown, Code2 } from 'lucide-react';
+import { Users, Calendar, MapPin, Zap, Send, LogOut, Trash2, Crown, Code2, Sparkles, ChevronDown, Trophy } from 'lucide-react';
 import Navbar from '../../../components/Navbar';
 import { useAuth } from '../../auth/context/AuthContext';
+
+const RESULT_LABELS = {
+  not_specified: 'Not Specified',
+  participated: 'Participated',
+  finalist: 'Finalist',
+  winner: 'Winner 🏆',
+};
 
 const TeamDetailPage = () => {
   const { teamId } = useParams();
@@ -16,6 +23,8 @@ const TeamDetailPage = () => {
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [actionId, setActionId] = useState(null);
   const [sentInvites, setSentInvites] = useState(new Set());
+  const [expandedCandidateId, setExpandedCandidateId] = useState(null);
+  const [savingResult, setSavingResult] = useState(false);
 
   const isLeader = team && user && team.leader?._id === user._id;
   const isMember = team && user && team.members?.some((m) => m._id === user._id);
@@ -123,6 +132,30 @@ const TeamDetailPage = () => {
     }
   };
 
+  // Phase 6: leader records the outcome once a hackathon wraps up - this
+  // is what powers hackathonsWon / hackathonsParticipated for every
+  // member of this team in the reputation system. No new backend route
+  // needed - the existing generic team-update endpoint already accepts
+  // any field in its $set.
+  const handleResultChange = async (newResult) => {
+    setSavingResult(true);
+    try {
+      const response = await fetch(`/api/v1/teams/${teamId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result: newResult }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setTeam((prev) => ({ ...prev, result: newResult }));
+      } else {
+        alert(`Error: ${data.message || 'Could not update result'}`);
+      }
+    } finally {
+      setSavingResult(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -162,8 +195,15 @@ const TeamDetailPage = () => {
                 <div className="w-full h-full flex items-center justify-center text-primary font-bold text-xl uppercase">{team.name.charAt(0)}</div>
               )}
             </div>
-            <div className="absolute top-4 right-4 bg-black/60 border border-white/10 px-3 py-1 text-[10px] font-mono uppercase tracking-widest">
-              {team.status}
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+              {team.result && team.result !== 'not_specified' && (
+                <div className="bg-primary/10 border border-primary px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-primary flex items-center gap-1.5">
+                  <Trophy className="w-3 h-3" /> {RESULT_LABELS[team.result]}
+                </div>
+              )}
+              <div className="bg-black/60 border border-white/10 px-3 py-1 text-[10px] font-mono uppercase tracking-widest">
+                {team.status}
+              </div>
             </div>
           </div>
           <div className="pt-12 p-8 space-y-6">
@@ -213,6 +253,23 @@ const TeamDetailPage = () => {
               </div>
             </div>
 
+            {/* Leader-only: record hackathon outcome (Phase 6 data source) */}
+            {isLeader && (
+              <div className="space-y-2 pt-4 border-t border-white/10">
+                <label className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Hackathon Result (feeds team reputation)</label>
+                <select
+                  value={team.result || 'not_specified'}
+                  onChange={(e) => handleResultChange(e.target.value)}
+                  disabled={savingResult}
+                  className="bg-black border border-white/10 px-4 py-2 text-xs font-mono uppercase text-white focus:outline-none focus:border-primary brutal-border appearance-none cursor-pointer disabled:opacity-50"
+                >
+                  {Object.entries(RESULT_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex gap-4 pt-4 border-t border-white/10">
               {!isLeader && !isMember && team.status === 'open' && !isFull && (
@@ -248,34 +305,66 @@ const TeamDetailPage = () => {
               <div className="text-center py-10 text-gray-500 text-xs font-mono">No candidates found right now.</div>
             ) : (
               <div className="grid md:grid-cols-2 gap-4">
-                {candidates.map(({ user: candidate, matchScore }) => {
+                {candidates.map(({ user: candidate, matchScore, matchExplanation }) => {
                   const alreadyInvited = sentInvites.has(candidate._id);
+                  const isExpanded = expandedCandidateId === candidate._id;
                   return (
-                    <div key={candidate._id} className="bg-black/60 border border-white/10 p-5 brutal-border flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-12 h-12 rounded-full overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
-                          {candidate.avatar ? <img src={candidate.avatar} className="w-full h-full object-cover" /> : null}
+                    <div key={candidate._id} className="bg-black/60 border border-white/10 p-5 brutal-border">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="w-12 h-12 rounded-full overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                            {candidate.avatar ? <img src={candidate.avatar} className="w-full h-full object-cover" /> : null}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-bold text-white truncate">{candidate.username}</div>
+                            <div className="text-[10px] text-gray-500 font-mono uppercase truncate">{candidate.team_role || 'Developer'}</div>
+                            {candidate.location && (
+                              <div className="flex items-center gap-1 text-[10px] text-gray-600 font-mono mt-0.5">
+                                <MapPin className="w-2.5 h-2.5" /> {candidate.location}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <div className="text-sm font-bold text-white truncate">{candidate.username}</div>
-                          <div className="text-[10px] text-gray-500 font-mono uppercase truncate">{candidate.team_role || 'Developer'}</div>
-                          {candidate.location && (
-                            <div className="flex items-center gap-1 text-[10px] text-gray-600 font-mono mt-0.5">
-                              <MapPin className="w-2.5 h-2.5" /> {candidate.location}
-                            </div>
-                          )}
+                        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                          <span className="text-xs font-bold text-primary bg-primary/10 border border-primary/30 px-2 py-1">{matchScore}%</span>
+                          <button
+                            onClick={() => handleInvite(candidate._id)}
+                            disabled={alreadyInvited || actionId === candidate._id}
+                            className="text-[10px] font-mono uppercase tracking-widest border border-white/10 hover:border-primary hover:text-primary px-3 py-2 transition-colors disabled:opacity-40 flex items-center gap-2"
+                          >
+                            <Send className="w-3 h-3" /> {alreadyInvited ? 'Invited' : actionId === candidate._id ? 'Sending...' : 'Invite'}
+                          </button>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        <span className="text-xs font-bold text-primary bg-primary/10 border border-primary/30 px-2 py-1">{matchScore}%</span>
-                        <button
-                          onClick={() => handleInvite(candidate._id)}
-                          disabled={alreadyInvited || actionId === candidate._id}
-                          className="text-[10px] font-mono uppercase tracking-widest border border-white/10 hover:border-primary hover:text-primary px-3 py-2 transition-colors disabled:opacity-40 flex items-center gap-2"
-                        >
-                          <Send className="w-3 h-3" /> {alreadyInvited ? 'Invited' : actionId === candidate._id ? 'Sending...' : 'Invite'}
-                        </button>
-                      </div>
+
+                      {matchExplanation?.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-white/10">
+                          <button
+                            onClick={() => setExpandedCandidateId(isExpanded ? null : candidate._id)}
+                            className="flex items-center gap-1.5 text-[10px] font-mono text-gray-500 hover:text-primary uppercase tracking-widest transition-colors"
+                          >
+                            <Sparkles className="w-3 h-3" /> Why this match
+                            <ChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                          </button>
+                          <AnimatePresence>
+                            {isExpanded && (
+                              <motion.ul
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="mt-2 space-y-1 overflow-hidden"
+                              >
+                                {matchExplanation.map((line, i) => (
+                                  <li key={i} className="text-[11px] font-mono text-gray-400 flex gap-2">
+                                    <span className="text-primary">›</span>
+                                    <span>{line}</span>
+                                  </li>
+                                ))}
+                              </motion.ul>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

@@ -73,6 +73,15 @@ const TeamSchema = new mongoose.Schema({
         trim: true,
         maxlength: 1000,
         default: ""
+    },
+
+    // NEW (Phase 6): leader-set outcome once a hackathon wraps up. Drives
+    // the reputation system's hackathonsParticipated / hackathonsWon stats
+    // for every member of this team - no separate manual entry needed.
+    result: {
+        type: String,
+        enum: ["not_specified", "participated", "finalist", "winner"],
+        default: "not_specified"
     }
 
 }, { timestamps: true });
