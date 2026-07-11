@@ -10,11 +10,11 @@ import {
     Lock,
     LayoutDashboard,
     MessageSquare,
-    CalendarClock,
     Calendar,
 } from 'lucide-react';
 import Navbar from '../../../components/Navbar';
 import TeamChatPanel from './chat/teamChatPanel.jsx';
+import MeetingWidget from './meetingWidget.jsx';
 import MembersPanel from './membersPanel.jsx';
 import JoinRequestsPanel from './joinRequestsPanel.jsx';
 import CandidatesPanel from './candidatesPanel.jsx';
@@ -310,14 +310,17 @@ export default function TeamDashboard() {
                     </div>
                 </motion.div>
 
+                {/* Next / current team meeting — driven by the team's calendar
+                    team-meeting events. Hides itself when there is none. */}
+                {isMember && <MeetingWidget teamId={teamId} />}
+
                 {/* Quick links */}
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-3 sm:grid-cols-3">
                     {linkCard(LayoutDashboard, 'Task board', `/teams/${teamId}/task-board`, false)}
                     {linkCard(Calendar, 'Calendar', `/teams/${teamId}/calendar`, false)}
                     {isMember
                         ? linkCard(MessageSquare, 'Team chat', null, false, () => setChatOpen(true))
                         : linkCard(MessageSquare, 'Team chat', '#', true)}
-                    {linkCard(CalendarClock, 'Meeting scheduler', '#', true)}
                 </div>
 
                 {/* Members */}

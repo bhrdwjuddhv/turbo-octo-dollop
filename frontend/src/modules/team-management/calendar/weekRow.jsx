@@ -24,6 +24,7 @@ export default function WeekRow({
     onAddEvent,
     onSelectEvent,
     onShowDay,
+    meetingCtx,
 }) {
     const { segments, chips, visibleLanes, rows } = layoutWeek(days, events, maxLanes);
 
@@ -67,6 +68,7 @@ export default function WeekRow({
                             continuesLeft={segment.continuesLeft}
                             continuesRight={segment.continuesRight}
                             onClick={onSelectEvent}
+                            meetingCtx={meetingCtx}
                         />
                     </div>
                 ))}

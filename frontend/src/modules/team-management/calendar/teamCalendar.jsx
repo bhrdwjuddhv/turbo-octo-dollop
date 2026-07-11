@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Navbar from '../../../components/Navbar';
+import { useAuth } from '../../auth/context/AuthContext';
 import CalendarToolbar from './calendarToolbar.jsx';
 import MonthView from './monthView.jsx';
 import WeekView from './weekView.jsx';
@@ -26,6 +27,15 @@ import {
 export default function TeamCalendar() {
     const { teamId } = useParams();
     const gridRef = useRef(null);
+    const { user } = useAuth();
+
+    // Ticking clock so a meeting's derived status (and its creator-only "End"
+    // button) flips the moment the start time passes — no reload needed.
+    const [now, setNow] = useState(() => new Date());
+    useEffect(() => {
+        const id = setInterval(() => setNow(new Date()), 30000);
+        return () => clearInterval(id);
+    }, []);
 
     const [view, setView] = useState('month');
     const [cursor, setCursor] = useState(() => new Date());
@@ -126,6 +136,39 @@ export default function TeamCalendar() {
         }
     };
 
+    // End a running meeting. Server re-checks that the caller is the creator —
+    // the in-cell button is only a convenience, never the authority.
+    const endMeeting = async (event) => {
+        if (!window.confirm(`End "${event.title}"?`)) return;
+
+        try {
+            const response = await fetch(
+                `/api/v1/calendar-events/${event._id}/end`,
+                { method: 'PATCH' },
+            );
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(`Error: ${data.message || 'Could not end the meeting'}`);
+                return;
+            }
+
+            setDetailEvent(null);
+            setDayKey(null);
+            await load();
+        } catch (err) {
+            console.error('End meeting failed:', err);
+            alert('An error occurred while ending the meeting.');
+        }
+    };
+
+    // Everything the grid needs to render meeting state in-cell.
+    const meetingCtx = useMemo(
+        () => ({ now, userId: user?._id, onEnd: endMeeting }),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [now, user?._id],
+    );
+
     // Pulled in on demand so html2canvas-pro + jspdf stay out of the main bundle.
     const exportPdf = async () => {
         if (!gridRef.current) return;
@@ -218,6 +261,7 @@ export default function TeamCalendar() {
                         onAddEvent={(dateKey) => setModalEvent({ date: dateKey })}
                         onSelectEvent={setDetailEvent}
                         onShowDay={setDayKey}
+                        meetingCtx={meetingCtx}
                     />
                 </div>
             </div>
@@ -231,6 +275,7 @@ export default function TeamCalendar() {
                         setDetailEvent(event);
                     }}
                     onClose={() => setDayKey(null)}
+                    meetingCtx={meetingCtx}
                 />
             )}
 

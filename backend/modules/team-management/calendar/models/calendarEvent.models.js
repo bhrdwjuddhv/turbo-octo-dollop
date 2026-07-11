@@ -85,6 +85,35 @@ const calendarEventSchema = new mongoose.Schema(
             default: ""
         },
 
+        /*
+         * --- Team meeting (type === "team-meeting") ------------------------
+         * Only these two fields are stored. The meeting's STATE is never
+         * stored — it is derived, so it can't drift:
+         *
+         *   endedAt set                       -> ended
+         *   now >= startAt && endedAt null    -> in progress
+         *   now <  startAt && endedAt null    -> scheduled
+         *
+         * where startAt = `${date}T${time || "00:00"}:00.000Z` (UTC).
+         * Interpreting the stored wall clock as UTC gives server and every
+         * client one identical instant, so "in progress" agrees across
+         * timezones. See meetingStatus() in the controller and the frontend's
+         * meetingUtils.js — the two must stay in sync.
+         */
+
+        // Optional http(s) URL. Empty means "no link" (widget is not clickable).
+        meetingLink: {
+            type: String,
+            trim: true,
+            default: ""
+        },
+
+        // Null until someone ends the meeting. Meetings have no end time.
+        endedAt: {
+            type: Date,
+            default: null
+        },
+
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",

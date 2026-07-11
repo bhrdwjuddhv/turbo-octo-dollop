@@ -75,6 +75,49 @@ const resolveEndDate = (endDate, startDate) => {
     return endDate;
 };
 
+/*
+ * --- Team meetings ------------------------------------------------------
+ * Status is DERIVED, never stored (a stored status would drift). The single
+ * source of truth for "when does this meeting start" is:
+ *
+ *     startAt = `${date}T${time || "00:00"}:00.000Z`   (interpreted as UTC)
+ *
+ * Interpreting the stored wall clock as UTC means the server and every client
+ * — whatever their local zone — compute the SAME instant, so "in progress" is
+ * consistent across timezones. The frontend mirrors this in meetingUtils.js;
+ * keep the two in sync.
+ */
+const MEETING_TYPE = "team-meeting";
+
+export const meetingStartAt = (event) =>
+    new Date(`${event.date}T${event.time || "00:00"}:00.000Z`);
+
+export const meetingStatus = (event, now = new Date()) => {
+    if (event.endedAt) return "ended";
+    return now >= meetingStartAt(event) ? "in-progress" : "scheduled";
+};
+
+// Only http(s) links are accepted — never javascript:/data: etc.
+const resolveMeetingLink = (type, meetingLink) => {
+    if (type !== MEETING_TYPE) return "";
+
+    const raw = meetingLink?.trim();
+    if (!raw) return "";
+
+    let url;
+    try {
+        url = new URL(raw);
+    } catch {
+        throw new ApiError(400, "meetingLink must be a valid URL");
+    }
+
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+        throw new ApiError(400, "meetingLink must be an http(s) URL");
+    }
+
+    return url.toString();
+};
+
 // A custom type carries its own label + colour; built-ins carry neither.
 const resolveCustomFields = (type, customLabel, color) => {
     if (type !== "custom") {
@@ -104,7 +147,8 @@ const createEvent = asyncHandler(async (req, res) => {
         type,
         customLabel,
         color,
-        description
+        description,
+        meetingLink
     } = req.body;
 
     await loadTeamForUser(teamId, req.user?._id);
@@ -127,6 +171,8 @@ const createEvent = asyncHandler(async (req, res) => {
         time: time ?? "",
         type: resolvedType,
         ...resolveCustomFields(resolvedType, customLabel, color),
+        // "" for non-meetings; validated http(s) URL otherwise.
+        meetingLink: resolveMeetingLink(resolvedType, meetingLink),
         description: description ?? "",
         createdBy: req.user?._id
     });
@@ -199,7 +245,8 @@ const updateEvent = asyncHandler(async (req, res) => {
         type,
         customLabel,
         color,
-        description
+        description,
+        meetingLink
     } = req.body;
 
     if (title !== undefined) {
@@ -233,6 +280,13 @@ const updateEvent = asyncHandler(async (req, res) => {
         );
         event.customLabel = custom.customLabel;
         event.color = custom.color;
+        // Switching away from a meeting drops its link.
+        event.meetingLink = resolveMeetingLink(
+            event.type,
+            meetingLink ?? event.meetingLink,
+        );
+    } else if (meetingLink !== undefined) {
+        event.meetingLink = resolveMeetingLink(event.type, meetingLink);
     }
 
     if (time !== undefined) event.time = time;
@@ -266,9 +320,95 @@ const deleteEvent = asyncHandler(async (req, res) => {
     );
 });
 
+// PATCH /api/v1/calendar-events/:eventId/end
+// Ends a running meeting. ONLY the meeting's creator may end it — enforced here,
+// never trusted from the client.
+const endMeeting = asyncHandler(async (req, res) => {
+
+    const event = await loadEventForUser(req.params.eventId, req.user?._id);
+
+    if (event.type !== MEETING_TYPE) {
+        throw new ApiError(400, "This event is not a team meeting");
+    }
+
+    if (event.createdBy.toString() !== req.user?._id.toString()) {
+        throw new ApiError(403, "Only the meeting's creator can end it");
+    }
+
+    if (event.endedAt) {
+        throw new ApiError(400, "This meeting has already ended");
+    }
+
+    if (meetingStatus(event) !== "in-progress") {
+        throw new ApiError(400, "This meeting has not started yet");
+    }
+
+    event.endedAt = new Date();
+    await event.save();
+    await event.populate("createdBy", CREATED_BY_FIELDS);
+
+    return res.status(200).json(
+        new ApiResponse(200, event, "Meeting ended")
+    );
+});
+
+// GET /api/v1/calendar-events/meetings/current?teamId=...
+// The one meeting the dashboard should feature, with its derived state:
+//   an in-progress meeting wins (most recently started if several);
+//   otherwise the soonest scheduled one. `null` when there is nothing to show.
+const getCurrentMeeting = asyncHandler(async (req, res) => {
+
+    const { teamId } = req.query;
+
+    await loadTeamForUser(teamId, req.user?._id);
+
+    // Non-ended meetings only. Few per team, so derive in JS rather than trying
+    // to express the UTC start-instant rule as a Mongo query.
+    const candidates = await CalendarEvent.find({
+        teamId,
+        type: MEETING_TYPE,
+        endedAt: null
+    }).populate("createdBy", CREATED_BY_FIELDS);
+
+    const now = new Date();
+
+    const withStatus = candidates.map((event) => ({
+        event,
+        startAt: meetingStartAt(event),
+        status: meetingStatus(event, now)
+    }));
+
+    const inProgress = withStatus
+        .filter((m) => m.status === "in-progress")
+        .sort((a, b) => b.startAt - a.startAt); // most recently started first
+
+    const scheduled = withStatus
+        .filter((m) => m.status === "scheduled")
+        .sort((a, b) => a.startAt - b.startAt); // soonest first
+
+    const featured = inProgress[0] ?? scheduled[0] ?? null;
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            featured
+                ? {
+                    meeting: featured.event,
+                    status: featured.status,
+                    startAt: featured.startAt,
+                    meetingLink: featured.event.meetingLink || ""
+                }
+                : null,
+            "Current meeting fetched successfully"
+        )
+    );
+});
+
 export {
     createEvent,
     getEvents,
+    endMeeting,
+    getCurrentMeeting,
     updateEvent,
     deleteEvent
 };

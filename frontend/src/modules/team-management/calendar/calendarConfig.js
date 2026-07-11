@@ -42,9 +42,21 @@ export const EVENT_TYPES = [
         dot: 'bg-orange-400',
         chip: 'bg-orange-400/15 text-orange-300 border-orange-400/40',
     },
+    {
+        // Violet on the grid — deliberately distinct from the dashboard widget's
+        // yellow/green, which encode meeting STATUS, not type.
+        id: 'team-meeting',
+        label: 'Team meeting',
+        hex: '#A78BFA',
+        dot: 'bg-violet-400',
+        chip: 'bg-violet-400/15 text-violet-300 border-violet-400/40',
+    },
 ];
 
 export const DEFAULT_TYPE = 'event';
+
+/** Team meetings carry `meetingLink` + `endedAt`; their status is derived. */
+export const MEETING_TYPE = 'team-meeting';
 
 /** A user-named type. Its label + colour live on the event, not here. */
 export const CUSTOM_TYPE = 'custom';

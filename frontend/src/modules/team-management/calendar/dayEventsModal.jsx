@@ -9,7 +9,7 @@ import { creatorName } from './calendarConfig.js';
  * What "+N more" opens: every event touching that day — spanning events
  * included, not just those starting on it. Picking one opens its detail.
  */
-export default function DayEventsModal({ dayKey, events, onSelectEvent, onClose }) {
+export default function DayEventsModal({ dayKey, events, onSelectEvent, onClose, meetingCtx }) {
     const dayEvents = eventsOnDay(events, dayKey);
 
     return (
@@ -45,7 +45,11 @@ export default function DayEventsModal({ dayKey, events, onSelectEvent, onClose 
                 <div className="flex flex-col gap-2">
                     {dayEvents.map((event) => (
                         <div key={event._id} className="flex flex-col gap-0.5">
-                            <EventChip event={event} onClick={onSelectEvent} />
+                            <EventChip
+                                event={event}
+                                onClick={onSelectEvent}
+                                meetingCtx={meetingCtx}
+                            />
                             <span className="pl-1.5 text-[10px] text-gray-600">
                                 {creatorName(event)}
                             </span>

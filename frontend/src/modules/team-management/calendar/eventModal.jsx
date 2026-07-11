@@ -6,13 +6,17 @@ import {
     DEFAULT_TYPE,
     CUSTOM_TYPE,
     CUSTOM_COLORS,
+    MEETING_TYPE,
 } from './calendarConfig.js';
+import { safeMeetingUrl } from './meetingUtils.js';
 
 /**
  * One modal for create + edit + delete. `event` carries an `_id` when editing;
  * a bare `{ date }` when creating on an empty cell.
  *
  * End date is optional: blank (or equal to the start) means a single-day event.
+ * A team meeting additionally takes an optional http(s) link; it has no end
+ * time — it runs until its creator ends it from the calendar cell.
  */
 export default function EventModal({ event, onSave, onDelete, onClose, saving }) {
     const isEdit = Boolean(event?._id);
@@ -27,14 +31,22 @@ export default function EventModal({ event, onSave, onDelete, onClose, saving })
         customLabel: event?.customLabel ?? '',
         color: event?.color || CUSTOM_COLORS[0],
         description: event?.description ?? '',
+        meetingLink: event?.meetingLink ?? '',
     });
 
     const update = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
     const isCustom = form.type === CUSTOM_TYPE;
+    const isMeetingType = form.type === MEETING_TYPE;
     const badRange = Boolean(form.endDate) && form.endDate < form.date;
     const missingLabel = isCustom && !form.customLabel.trim();
-    const canSave = form.title.trim() && form.date && !badRange && !missingLabel;
+    // Link is optional; if given it must be a real http(s) URL.
+    const badLink =
+        isMeetingType &&
+        Boolean(form.meetingLink.trim()) &&
+        !safeMeetingUrl(form.meetingLink);
+    const canSave =
+        form.title.trim() && form.date && !badRange && !missingLabel && !badLink;
 
     const submit = (e) => {
         e.preventDefault();
@@ -176,6 +188,33 @@ export default function EventModal({ event, onSave, onDelete, onClose, saving })
                             </button>
                         </div>
                     </div>
+
+                    {isMeetingType && (
+                        <div className="flex flex-col gap-2 rounded-lg border border-border-dark bg-background/60 p-3">
+                            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                Meeting link{' '}
+                                <span className="normal-case text-gray-600">(optional)</span>
+                            </label>
+                            <input
+                                type="url"
+                                value={form.meetingLink}
+                                onChange={(e) => update('meetingLink', e.target.value)}
+                                placeholder="https://meet.google.com/abc-defg-hij"
+                                className={field}
+                            />
+                            {badLink ? (
+                                <p className="text-xs text-red-400">
+                                    Must be a valid http(s) link.
+                                </p>
+                            ) : (
+                                <p className="text-xs text-gray-600">
+                                    Starts at the time above and runs until you end it from
+                                    its calendar cell. No link? The dashboard still shows
+                                    the status.
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     {isCustom && (
                         <div className="flex flex-col gap-3 rounded-lg border border-border-dark bg-background/60 p-3">

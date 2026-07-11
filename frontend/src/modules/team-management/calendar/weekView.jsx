@@ -7,7 +7,14 @@ import { generateWeekDays } from './calendarUtils.js';
  * just taller and with room for more lanes before overflowing. Spanning events
  * cross the relevant day columns exactly as they do in a month row.
  */
-export default function WeekView({ cursor, events, onAddEvent, onSelectEvent, onShowDay }) {
+export default function WeekView({
+    cursor,
+    events,
+    onAddEvent,
+    onSelectEvent,
+    onShowDay,
+    meetingCtx,
+}) {
     const days = generateWeekDays(cursor);
 
     return (
@@ -21,6 +28,7 @@ export default function WeekView({ cursor, events, onAddEvent, onSelectEvent, on
                 onAddEvent={onAddEvent}
                 onSelectEvent={onSelectEvent}
                 onShowDay={onShowDay}
+                meetingCtx={meetingCtx}
             />
         </div>
     );

@@ -29,7 +29,6 @@ function App() {
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/contact" element={<Contact />} />
-              <Route path="/task-board" element={<TaskBoard />} />
             <Route 
               path="/dashboard" 
               element={

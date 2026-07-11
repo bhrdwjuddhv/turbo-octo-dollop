@@ -7,7 +7,14 @@ import { generateMonthDays, toKey } from './calendarUtils.js';
  * computed per row, so an event crossing a week boundary breaks into a fresh
  * bar segment on the next row instead of being drawn once in its start cell.
  */
-export default function MonthView({ cursor, events, onAddEvent, onSelectEvent, onShowDay }) {
+export default function MonthView({
+    cursor,
+    events,
+    onAddEvent,
+    onSelectEvent,
+    onShowDay,
+    meetingCtx,
+}) {
     const days = generateMonthDays(cursor);
 
     const weeks = [];
@@ -37,6 +44,7 @@ export default function MonthView({ cursor, events, onAddEvent, onSelectEvent, o
                     onAddEvent={onAddEvent}
                     onSelectEvent={onSelectEvent}
                     onShowDay={onShowDay}
+                    meetingCtx={meetingCtx}
                 />
             ))}
         </div>
