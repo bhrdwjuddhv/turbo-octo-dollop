@@ -331,7 +331,12 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
         techStack, 
         experience, 
         projects, 
-        socialLinks 
+        socialLinks,
+        // NEW (Phase 4): saveable working-hours preference. Note
+        // preferences/availability/experienceLevel still aren't wired
+        // into this endpoint - see the checklist at the end of this
+        // response for why.
+        workingHours
     } = req.body;
 
     const parseArray = (data) => {
@@ -355,7 +360,8 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
                 techStack: parseArray(techStack),
                 experience: parseArray(experience),
                 projects: parseArray(projects),
-                socialLinks: typeof socialLinks === 'string' ? JSON.parse(socialLinks) : socialLinks
+                socialLinks: typeof socialLinks === 'string' ? JSON.parse(socialLinks) : socialLinks,
+                ...(workingHours ? { workingHours } : {})
             }
         },
         { new: true }

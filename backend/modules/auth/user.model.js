@@ -42,16 +42,29 @@ const userSchema = new Schema({
         type: String,
         required: false
     },
-    // NEW: used by the matching engine to gauge seniority proximity
+    // used by the matching engine to gauge seniority proximity
     experienceLevel: {
         type: String,
         enum: ["Beginner", "Intermediate", "Advanced", "Expert"],
         default: "Intermediate"
     },
-    // NEW: used by the matching engine / discovery filters
+    // used by the matching engine / discovery filters
     availability: {
         type: Boolean,
         default: true
+    },
+    // NEW (Phase 4): preferred hacking hours, used for the "working hours
+    // compatibility" matching signal.
+    workingHours: {
+        type: String,
+        enum: [
+            "Early Bird (6AM - 12PM)",
+            "Daytime (12PM - 6PM)",
+            "Evening (6PM - 12AM)",
+            "Night Owl (12AM - 6AM)",
+            "Flexible / Anytime",
+        ],
+        default: "Flexible / Anytime"
     },
     location: {
         type: String,

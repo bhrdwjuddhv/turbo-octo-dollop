@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../auth/context/AuthContext';
-import { Code2, X, ThumbsUp, MapPin, Terminal, LogOut, User } from 'lucide-react';
+import { Code2, X, ThumbsUp, MapPin, Terminal, LogOut, User, Zap, Sparkles } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
 const TECH_COLORS = {
@@ -16,6 +16,7 @@ const Discovery = () => {
   const [matches, setMatches] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showWhy, setShowWhy] = useState(false);
 
   useEffect(() => {
     fetchMatches();
@@ -24,20 +25,20 @@ const Discovery = () => {
   const fetchMatches = async () => {
     try {
       // Smart matching engine - ranked by tech overlap, role
-      // complementarity, experience, location & availability.
-      // Was previously pointed at /api/v1/users/discover, whose response
-      // shape is { users, pagination } (an object) rather than a plain
-      // array, which is why the deck always rendered empty.
+      // complementarity, experience, location, availability, working
+      // hours, and prior hackathon experience.
       const response = await fetch('/api/v1/matching/users?limit=50');
       if (response.ok) {
         const data = await response.json();
         const ranked = data?.data?.matches || [];
-        // Flatten { user, matchScore, matchBreakdown } -> user + matchScore
-        // so the rest of this component (which expects a flat user object)
-        // doesn't need to change at all.
-        const flattened = ranked.map(({ user: matchedUser, matchScore }) => ({
+        // Flatten { user, matchScore, matchBreakdown, matchExplanation }
+        // -> user + those three, so the rest of this component (which
+        // expects a flat user object) doesn't need to change.
+        const flattened = ranked.map(({ user: matchedUser, matchScore, matchBreakdown, matchExplanation }) => ({
           ...matchedUser,
           matchScore,
+          matchBreakdown,
+          matchExplanation,
         }));
         setMatches(flattened);
       } else {
@@ -58,6 +59,7 @@ const Discovery = () => {
 
   const handleAction = (direction) => {
     // If direction is 'right' (Connect) or 'left' (Skip), advance index
+    setShowWhy(false);
     setCurrentIndex(prev => prev + 1);
   };
 
@@ -125,8 +127,19 @@ const Discovery = () => {
                     )}
                   </div>
                 </div>
-                <div className="absolute top-4 right-4 bg-primary/10 border border-primary px-3 py-1">
-                  <span className="text-[10px] font-mono text-primary uppercase tracking-widest">{currentMatch.team_role || 'Developer'}</span>
+                <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
+                  <div className="bg-primary/10 border border-primary px-3 py-1">
+                    <span className="text-[10px] font-mono text-primary uppercase tracking-widest">{currentMatch.team_role || 'Developer'}</span>
+                  </div>
+                  {typeof currentMatch.matchScore === 'number' && (
+                    <button
+                      onClick={() => setShowWhy((v) => !v)}
+                      className="bg-black/70 border border-white/20 hover:border-primary px-3 py-1 flex items-center gap-1.5 transition-colors"
+                    >
+                      <Zap className="w-3 h-3 text-primary" />
+                      <span className="text-[10px] font-mono text-white uppercase tracking-widest">{currentMatch.matchScore}% Match</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -141,6 +154,29 @@ const Discovery = () => {
                     <span className="text-[10px] font-mono uppercase">{currentMatch.location || 'Unknown Node'}</span>
                   </div>
                 </div>
+
+                {/* Why this match - plain-English explanation from the
+                    matching engine, not just a raw score. */}
+                {showWhy && currentMatch.matchExplanation?.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="border border-primary/30 bg-primary/5 p-4 space-y-2"
+                  >
+                    <label className="text-[10px] font-mono text-primary uppercase tracking-widest flex items-center gap-2 mb-2">
+                      <Sparkles className="w-3 h-3" /> Why This Match_
+                    </label>
+                    <ul className="space-y-1.5">
+                      {currentMatch.matchExplanation.map((line, i) => (
+                        <li key={i} className="text-xs font-mono text-gray-300 flex gap-2">
+                          <span className="text-primary">›</span>
+                          <span>{line}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                )}
 
                 {/* Tech Stack */}
                 {currentMatch.techStack && currentMatch.techStack.length > 0 && (

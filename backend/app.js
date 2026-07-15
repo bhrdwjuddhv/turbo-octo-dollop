@@ -8,6 +8,7 @@ import matchingRouter from './modules/matching/matching.routes.js'
 import flowBoardRouter from './modules/team-management/task-board/routes/flowboard.routes.js'
 import calendarEventRouter from './modules/team-management/calendar/routes/calendarEvent.routes.js'
 import teamChatRouter from './modules/team-management/chat/routes/message.routes.js'
+import reputationRouter from './modules/reputation/reputation.routes.js';
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.use("/api/v1/matching", matchingRouter)
 app.use("/api/v1/task-boards", flowBoardRouter)
 app.use("/api/v1/calendar-events", calendarEventRouter)
 app.use("/api/v1/team-chat", teamChatRouter)
+app.use("/api/v1/reputation", reputationRouter);
 
 // error handler
 app.use((err, req, res, next) => {
