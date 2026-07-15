@@ -61,6 +61,14 @@ const TeamSchema = new mongoose.Schema({
         index: true
     },
 
+    // Who can discover/join. Owner is `leader` (reused, not a new field).
+    visibility: {
+        type: String,
+        enum: ["public", "private"],
+        default: "public",
+        index: true
+    },
+
     hackathonName: {
         type: String,
         trim: true,

@@ -1,0 +1,188 @@
+/*
+ * Whiteboard (eraser.io-style) overrides for React Flow.
+ * Scoped under .flow-canvas so nothing here leaks into the rest of the app.
+ * Colours are intentionally light/muted regardless of the app's dark theme.
+ */
+
+/* --- Pane background -------------------------------------------------------
+ * The pane colour is owned SOLELY by these two rules (theme-driven), so it is
+ * identical whether or not the dot pattern is showing.
+ *
+ * React Flow's <Background> renders an svg.react-flow__background that, by
+ * default, paints a full-pane fill:
+ *     background-color: var(--xy-background-color-props,
+ *                       var(--xy-background-color,
+ *                       var(--xy-background-color-default)));
+ * In dark mode `.react-flow.dark` sets --xy-background-color-default: #141414,
+ * so that svg used to cover the pane with #141414 while dots were ON, and
+ * unmounting it (dots OFF) revealed our own darker-blue root beneath — a
+ * colour "flood" on toggle. Forcing the svg transparent means it only ever
+ * draws the dot pattern and never a pane fill.
+ */
+.flow-canvas {
+    background-color: #fcfcfd;
+}
+
+.flow-canvas .react-flow__background {
+    background-color: transparent;
+}
+
+/* --- Connection handles: hidden until the node is hovered --- */
+.flow-canvas .rf-handle {
+    width: 9px;
+    height: 9px;
+    background: #ffffff;
+    border: 1.5px solid #94a3b8;
+    border-radius: 9999px;
+    opacity: 0;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.flow-canvas .react-flow__node:hover .rf-handle,
+.flow-canvas .react-flow__node.selected .rf-handle {
+    opacity: 1;
+}
+
+.flow-canvas .rf-handle:hover {
+    transform: scale(1.35);
+    border-color: #6366f1;
+}
+
+/* --- NodeResizer --- */
+.flow-canvas .rf-resize-line {
+    border-color: #6366f1;
+    border-width: 1px;
+}
+
+.flow-canvas .rf-resize-handle {
+    width: 8px;
+    height: 8px;
+    background: #ffffff;
+    border: 1.5px solid #6366f1;
+    border-radius: 2px;
+}
+
+/* --- Edges --- */
+.flow-canvas .react-flow__edge-path {
+    stroke: #94a3b8;
+    stroke-width: 2;
+}
+
+.flow-canvas .react-flow__edge.selected .react-flow__edge-path,
+.flow-canvas .react-flow__edge:hover .react-flow__edge-path {
+    stroke: #6366f1;
+}
+
+.flow-canvas .react-flow__connection-path {
+    stroke: #6366f1;
+    stroke-width: 2;
+}
+
+/* --- Selected node outline --- */
+.flow-canvas .react-flow__node.selected {
+    outline: none;
+}
+
+/* --- Controls: soft, rounded, whiteboard-friendly --- */
+.flow-canvas .react-flow__controls {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1);
+    border: 1px solid #eef2f7;
+}
+
+.flow-canvas .react-flow__controls-button {
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    color: #475569;
+}
+
+.flow-canvas .react-flow__controls-button:hover {
+    background: #f8fafc;
+}
+
+/* --- Attribution: keep it subtle --- */
+.flow-canvas .react-flow__attribution {
+    background: transparent;
+    font-size: 10px;
+    opacity: 0.5;
+}
+
+/* ==================================================================
+ * Dark theme. React Flow adds `.dark` to its root when colorMode is
+ * dark, and we mirror it onto `.flow-canvas-shell` so the floating
+ * toolbar (rendered outside the React Flow root) themes too.
+ * ================================================================== */
+.flow-canvas.dark {
+    background-color: #0f172a;
+}
+
+.flow-canvas.dark .rf-handle {
+    background: #0f172a;
+    border-color: #64748b;
+}
+
+.flow-canvas.dark .rf-handle:hover {
+    border-color: #818cf8;
+}
+
+.flow-canvas.dark .react-flow__edge-path {
+    stroke: #64748b;
+}
+
+.flow-canvas.dark .react-flow__edge.selected .react-flow__edge-path,
+.flow-canvas.dark .react-flow__edge:hover .react-flow__edge-path {
+    stroke: #818cf8;
+}
+
+.flow-canvas.dark .react-flow__controls {
+    border-color: #1e293b;
+}
+
+.flow-canvas.dark .react-flow__controls-button {
+    background: #1e293b;
+    border-bottom-color: #334155;
+    color: #cbd5e1;
+    fill: #cbd5e1;
+}
+
+.flow-canvas.dark .react-flow__controls-button:hover {
+    background: #334155;
+}
+
+/* --- Floating toolbar in dark mode --- */
+.flow-canvas-shell.dark .rf-toolbar {
+    background: rgba(15, 23, 42, 0.8);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.flow-canvas-shell.dark .rf-toolbar button {
+    color: #cbd5e1;
+}
+
+.flow-canvas-shell.dark .rf-toolbar button:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.flow-canvas-shell.dark .rf-stepper {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.flow-canvas-shell.dark .rf-stepper span {
+    color: #cbd5e1;
+}
+
+.flow-canvas-shell.dark .rf-stepper button:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* --- Popovers in dark mode --- */
+.flow-canvas-shell.dark .rf-popover {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+.flow-canvas-shell.dark .rf-popover button:hover {
+    background: rgba(255, 255, 255, 0.08);
+}

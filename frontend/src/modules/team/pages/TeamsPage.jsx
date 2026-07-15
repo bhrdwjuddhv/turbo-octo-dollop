@@ -11,7 +11,6 @@ const TeamsPage = () => {
   const [skill, setSkill] = useState('');
   const [status, setStatus] = useState('');
   const [hackathonName, setHackathonName] = useState('');
-  const [joiningId, setJoiningId] = useState(null);
 
   const fetchTeams = async () => {
     setLoading(true);
@@ -46,22 +45,10 @@ const TeamsPage = () => {
     fetchTeams();
   };
 
-  const handleJoin = async (teamId) => {
-    setJoiningId(teamId);
-    try {
-      const response = await fetch(`/api/v1/teams/${teamId}/join`, { method: 'POST' });
-      const data = await response.json();
-      if (response.ok) {
-        navigate(`/teams/${teamId}`);
-      } else {
-        alert(`Error: ${data.message || 'Could not join team'}`);
-      }
-    } catch (error) {
-      console.error('Join failed:', error);
-      alert('An error occurred while joining the team.');
-    } finally {
-      setJoiningId(null);
-    }
+  // Joining is now request + approval: open the team's dashboard, where the
+  // "Request to join" dialog (with a note to the owner) lives.
+  const handleJoin = (teamId) => {
+    navigate(`/teams/${teamId}`);
   };
 
   return (
@@ -179,10 +166,9 @@ const TeamsPage = () => {
                   {team.status === 'open' && (team.members?.length || 0) < team.maxMembers && (
                     <button
                       onClick={() => handleJoin(team._id)}
-                      disabled={joiningId === team._id}
-                      className="flex-1 bg-primary/10 border border-primary text-primary py-2 text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-black transition-all disabled:opacity-50"
+                      className="flex-1 bg-primary/10 border border-primary text-primary py-2 text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-black transition-all"
                     >
-                      {joiningId === team._id ? 'Joining...' : 'Request to Join'}
+                      Request to Join
                     </button>
                   )}
                 </div>

@@ -1,9 +1,19 @@
 import {Team} from "./team.model.js";
+import {JoinRequest} from "./joinRequest.model.js";
 import {User} from "../auth/user.model.js";
 import {asyncHandler} from "../../utils/asyncHandler.js";
 import {ApiResponse} from "../../utils/ApiResponse.js";
 import {ApiError} from "../../utils/ApiError.js";
 import {uploadOnCloudinary} from "../../utils/cloudinary.js";
+
+// Fields safe to expose for a member/candidate list.
+const MEMBER_FIELDS = "username fullName avatar team_role";
+
+const isOwner = (team, userId) =>
+    team.leader.toString() === userId?.toString();
+
+const isMember = (team, userId) =>
+    team.members.some((m) => m.toString() === userId?.toString());
 
 const createTeam = asyncHandler(async (req, res) => {
 
@@ -319,72 +329,166 @@ const deleteTeam = asyncHandler(async (req, res) => {
     );
 });
 
-const joinTeam = asyncHandler(async (req, res) => {
+// POST /:teamId/join
+// Request + approval flow: creates a PENDING join request instead of adding
+// the user to the team directly. The owner accepts/rejects it later.
+const requestToJoin = asyncHandler(async (req, res) => {
 
     const { teamId } = req.params;
+    const { note } = req.body;
 
     const team = await Team.findById(teamId);
 
     if (!team) {
-        throw new ApiError(
-            404,
-            "Team not found"
-        );
+        throw new ApiError(404, "Team not found");
+    }
+
+    if (isOwner(team, req.user?._id)) {
+        throw new ApiError(400, "You already own this team");
+    }
+
+    if (isMember(team, req.user?._id)) {
+        throw new ApiError(400, "You are already a member of this team");
     }
 
     if (team.status === "closed") {
-        throw new ApiError(
-            400,
-            "Team is closed"
-        );
+        throw new ApiError(400, "This team is not accepting new members");
     }
 
-    if (
-        team.members.some(
-            member =>
-                member.toString() ===
-                req.user?._id.toString()
-        )
-    ) {
-        throw new ApiError(
-            400,
-            "Already a member"
-        );
+    // No second pending request from the same user for the same team.
+    const existing = await JoinRequest.findOne({
+        teamId,
+        userId: req.user?._id,
+        status: "pending"
+    });
+
+    if (existing) {
+        throw new ApiError(400, "You already have a pending request for this team");
     }
 
-    if (
-        team.members.length >=
-        team.maxMembers
-    ) {
-        throw new ApiError(
-            400,
-            "Team is full"
-        );
+    const request = await JoinRequest.create({
+        teamId,
+        userId: req.user?._id,
+        note: note?.trim() || ""
+    });
+
+    return res.status(201).json(
+        new ApiResponse(201, request, "Join request sent")
+    );
+});
+
+// GET /:teamId/dashboard
+// Team + populated members for everyone; pending join requests only for the owner.
+const getTeamDashboard = asyncHandler(async (req, res) => {
+
+    const { teamId } = req.params;
+
+    const team = await Team.findById(teamId)
+        .populate("leader", MEMBER_FIELDS)
+        .populate("members", MEMBER_FIELDS);
+
+    if (!team) {
+        throw new ApiError(404, "Team not found");
     }
 
-    const updatedTeam =
-        await Team.findByIdAndUpdate(
+    const owner = isOwner(team, req.user?._id);
 
-            teamId,
-
-            {
-                $addToSet: {
-                    members: req.user?._id
-                }
-            },
-
-            {
-                new: true
-            }
-
-        );
+    // Only the owner ever sees who has applied.
+    const pendingRequests = owner
+        ? await JoinRequest.find({ teamId, status: "pending" })
+            .populate("userId", MEMBER_FIELDS)
+            .sort({ createdAt: -1 })
+        : [];
 
     return res.status(200).json(
         new ApiResponse(
             200,
-            updatedTeam,
-            "Joined team successfully"
+            {
+                team,
+                isOwner: owner,
+                isMember: owner || isMember(team, req.user?._id),
+                pendingRequests
+            },
+            "Dashboard fetched successfully"
         )
+    );
+});
+
+// POST /:teamId/requests/:requestId/respond   body: { action: "accept" | "reject" }
+// Owner-only. Accepting adds the requester to members.
+const respondToJoinRequest = asyncHandler(async (req, res) => {
+
+    const { teamId, requestId } = req.params;
+    const { action } = req.body;
+
+    if (!["accept", "reject"].includes(action)) {
+        throw new ApiError(400, "action must be 'accept' or 'reject'");
+    }
+
+    const team = await Team.findById(teamId);
+
+    if (!team) {
+        throw new ApiError(404, "Team not found");
+    }
+
+    if (!isOwner(team, req.user?._id)) {
+        throw new ApiError(403, "Only the team owner can respond to requests");
+    }
+
+    const request = await JoinRequest.findOne({ _id: requestId, teamId });
+
+    if (!request) {
+        throw new ApiError(404, "Join request not found");
+    }
+
+    if (request.status !== "pending") {
+        throw new ApiError(400, "This request has already been answered");
+    }
+
+    if (action === "accept") {
+        if (!isMember(team, request.userId)) {
+            if (team.members.length >= team.maxMembers) {
+                throw new ApiError(400, "Team is full");
+            }
+            team.members.push(request.userId);
+            await team.save();
+        }
+        request.status = "accepted";
+    } else {
+        request.status = "rejected";
+    }
+
+    await request.save();
+
+    return res.status(200).json(
+        new ApiResponse(200, request, `Request ${request.status}`)
+    );
+});
+
+// DELETE /:teamId/members/:userId   Owner-only. Cannot remove the owner.
+const removeMember = asyncHandler(async (req, res) => {
+
+    const { teamId, userId } = req.params;
+
+    const team = await Team.findById(teamId);
+
+    if (!team) {
+        throw new ApiError(404, "Team not found");
+    }
+
+    if (!isOwner(team, req.user?._id)) {
+        throw new ApiError(403, "Only the team owner can remove members");
+    }
+
+    if (team.leader.toString() === userId) {
+        throw new ApiError(400, "The owner cannot be removed");
+    }
+
+    team.members = team.members.filter((m) => m.toString() !== userId);
+    await team.save();
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "Member removed")
     );
 });
 
@@ -434,8 +538,11 @@ export {
     createTeam,
     discoverTeams,
     getTeamById,
+    getTeamDashboard,
     deleteTeam,
     updateTeam,
-    joinTeam,
+    requestToJoin,
+    respondToJoinRequest,
+    removeMember,
     leaveTeam,
 }

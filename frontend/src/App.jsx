@@ -7,13 +7,15 @@ import Discovery from './modules/matching/pages/Discovery';
 import Profile from './modules/auth/pages/Profile';
 import TeamsPage from './modules/team/pages/TeamsPage';
 import CreateTeamPage from './modules/team/pages/CreateTeamPage';
-import TeamDetailPage from './modules/team/pages/TeamDetailPage';
+import TeamDashboard from './modules/team-management/dashboard/teamDashboard';
 import InvitesPage from './modules/invite/pages/InvitesPage';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Contact from './pages/Contact';
 import { AuthProvider } from './modules/auth/context/AuthContext';
 import ProtectedRoute from './modules/auth/components/ProtectedRoute';
+import TaskBoard from "./modules/team-management/task-board/taskBoard.jsx";
+import TeamCalendar from "./modules/team-management/calendar/teamCalendar.jsx";
 
 function App() {
   return (
@@ -63,7 +65,23 @@ function App() {
               path="/teams/:teamId"
               element={
                 <ProtectedRoute>
-                  <TeamDetailPage />
+                  <TeamDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teams/:teamId/task-board"
+              element={
+                <ProtectedRoute>
+                  <TaskBoard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teams/:teamId/calendar"
+              element={
+                <ProtectedRoute>
+                  <TeamCalendar />
                 </ProtectedRoute>
               }
             />
