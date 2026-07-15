@@ -13,7 +13,13 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: process.env.CORS_ORIGIN,
+        // Both socket clients connect cross-origin (vite :5173 -> api :8000) with
+        // `withCredentials: true` so the httpOnly accessToken cookie rides along.
+        // A literal "*" origin is INVALID for credentialed requests — the browser
+        // rejects `Access-Control-Allow-Origin: *` when credentials are included,
+        // which would kill the polling transport. `true` reflects the caller's
+        // origin instead, which is credential-safe.
+        origin: process.env.CORS_ORIGIN === "*" ? true : process.env.CORS_ORIGIN,
         credentials: true,
     },
 });
